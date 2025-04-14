@@ -1,5 +1,5 @@
 /**
- * PenTool - A vanilla TypeScript implementation of an SVG pen tool
+ * PenTool - A vanilla JavaScript implementation of an SVG pen tool
  * 
  * Features:
  * - SVG-based drawing for resolution independence
@@ -10,51 +10,27 @@
  * - Developer customization options
  */
 
-export interface PenToolOptions {
-  /** Target element to attach the pen tool to */
-  targetElement: HTMLElement;
-  /** Width of the drawing line */
-  lineWidth?: number;
-  /** Color of the drawing line */
-  lineColor?: string;
-  /** Position of the tool buttons ('top', 'bottom', 'left', 'right') */
-  toolPosition?: 'top' | 'bottom' | 'left' | 'right';
-  /** Z-index of the SVG drawing layer */
-  zIndex?: number;
-  /** Width of the eraser tool */
-  eraserWidth?: number;
-}
-
-type StrokeType = 'pen' | 'eraser';
-
-interface Stroke {
-  type: StrokeType;
-  element: SVGPathElement;
-  timestamp: number;
-  isTemporary?: boolean;
-}
-
 export class PenTool {
-  private targetElement: HTMLElement;
-  private svg: SVGSVGElement;
-  private drawingContainer: SVGGElement;
-  private isDrawing: boolean = false;
-  private currentPath: SVGPathElement | null = null;
-  private currentPathData: string = '';
-  private toolbar: HTMLDivElement;
-  private eraserIndicator: SVGCircleElement | null = null;
-  private strokes: Stroke[] = [];
-  private temporaryEraserStroke: Stroke | null = null;
+  targetElement;
+  svg;
+  drawingContainer;
+  isDrawing = false;
+  currentPath = null;
+  currentPathData = '';
+  toolbar;
+  eraserIndicator = null;
+  strokes = [];
+  temporaryEraserStroke = null;
   
   // Configuration options
-  private lineWidth: number;
-  private lineColor: string;
-  private toolPosition: 'top' | 'bottom' | 'left' | 'right';
-  private zIndex: number;
-  private currentTool: StrokeType = 'pen';
-  private eraserWidth: number;
+  lineWidth;
+  lineColor;
+  toolPosition;
+  zIndex;
+  currentTool = 'pen';
+  eraserWidth;
 
-  constructor(options: PenToolOptions) {
+  constructor(options) {
     // Initialize with default values or provided options
     this.targetElement = options.targetElement;
     this.lineWidth = options.lineWidth || 3;
@@ -69,7 +45,7 @@ export class PenTool {
   /**
    * Initialize the pen tool with SVG canvas and toolbar
    */
-  private initialize(): void {
+  initialize() {
     // Set position relative on target if not already
     const computedStyle = window.getComputedStyle(this.targetElement);
     if (computedStyle.position === 'static') {
@@ -112,7 +88,7 @@ export class PenTool {
   /**
    * Set toolbar position based on the toolPosition option
    */
-  private setToolbarPosition(): void {
+  setToolbarPosition() {
     // Reset all positioning styles first
     this.toolbar.style.top = '';
     this.toolbar.style.right = '';
@@ -160,7 +136,7 @@ export class PenTool {
   /**
    * Create toolbar with pen, eraser, and clear all buttons
    */
-  private createToolbar(): void {
+  createToolbar() {
     const tools = [
       { name: 'pen', icon: this.getPenIcon(), title: 'Kalem Aracı' },
       { name: 'eraser', icon: this.getEraserIcon(), title: 'Silgi Aracı' },
@@ -192,7 +168,7 @@ export class PenTool {
           button.classList.add('active');
           
           // Set current tool
-          this.currentTool = tool.name as StrokeType;
+          this.currentTool = tool.name;
           
           // Enable pointer events on SVG when a drawing tool is selected
           this.svg.style.pointerEvents = 'auto';
@@ -228,7 +204,7 @@ export class PenTool {
   /**
    * Add event listeners for mouse and touch events
    */
-  private addEventListeners(): void {
+  addEventListeners() {
     // Mouse events
     this.svg.addEventListener('mousedown', this.handleDrawStart.bind(this));
     this.svg.addEventListener('mousemove', this.handleDrawMove.bind(this));
@@ -244,7 +220,7 @@ export class PenTool {
   /**
    * Handle start of drawing (mousedown)
    */
-  private handleDrawStart(event: MouseEvent): void {
+  handleDrawStart(event) {
     event.preventDefault();
     
     const rect = this.svg.getBoundingClientRect();
@@ -263,7 +239,7 @@ export class PenTool {
   /**
    * Handle movement during drawing (mousemove)
    */
-  private handleDrawMove(event: MouseEvent): void {
+  handleDrawMove(event) {
     if (!this.isDrawing) return;
     
     const rect = this.svg.getBoundingClientRect();
@@ -280,7 +256,7 @@ export class PenTool {
   /**
    * Handle end of drawing (mouseup)
    */
-  private handleDrawEnd(): void {
+  handleDrawEnd() {
     if (!this.isDrawing) return;
     
     if (this.currentPath) {
@@ -310,7 +286,7 @@ export class PenTool {
   /**
    * Handle touch start event
    */
-  private handleTouchStart(event: TouchEvent): void {
+  handleTouchStart(event) {
     if (event.touches.length !== 1) return;
     
     event.preventDefault();
@@ -332,7 +308,7 @@ export class PenTool {
   /**
    * Handle touch move event
    */
-  private handleTouchMove(event: TouchEvent): void {
+  handleTouchMove(event) {
     if (!this.isDrawing || event.touches.length !== 1) return;
     
     event.preventDefault();
@@ -352,14 +328,14 @@ export class PenTool {
   /**
    * Handle touch end event
    */
-  private handleTouchEnd(): void {
+  handleTouchEnd() {
     this.handleDrawEnd();
   }
 
   /**
    * Start drawing at the specified coordinates
    */
-  private startDrawing(x: number, y: number): void {
+  startDrawing(x, y) {
     this.currentPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.currentPath.setAttribute('stroke', this.lineColor);
     this.currentPath.setAttribute('stroke-width', this.lineWidth.toString());
@@ -377,7 +353,7 @@ export class PenTool {
   /**
    * Continue drawing to the specified coordinates
    */
-  private continueDrawing(x: number, y: number): void {
+  continueDrawing(x, y) {
     if (!this.currentPath) return;
     
     this.currentPathData += ` L ${x} ${y}`;
@@ -387,7 +363,7 @@ export class PenTool {
   /**
    * Start erasing at the specified coordinates
    */
-  private startErasing(x: number, y: number): void {
+  startErasing(x, y) {
     this.showEraserIndicator(x, y);
     
     // Create a new eraser path (invisible, just for tracking)
@@ -419,7 +395,7 @@ export class PenTool {
   /**
    * Continue erasing to the specified coordinates
    */
-  private continueErasing(x: number, y: number): void {
+  continueErasing(x, y) {
     if (!this.currentPath) return;
     
     this.showEraserIndicator(x, y);
@@ -437,7 +413,7 @@ export class PenTool {
   /**
    * Render all strokes with proper masking
    */
-  private renderStrokes(): void {
+  renderStrokes() {
     // Clear the container
     while (this.drawingContainer.firstChild) {
       this.drawingContainer.removeChild(this.drawingContainer.firstChild);
@@ -458,8 +434,8 @@ export class PenTool {
     this.strokes.sort((a, b) => a.timestamp - b.timestamp);
     
     // First, separate pen strokes and eraser strokes
-    const penStrokes: Stroke[] = [];
-    const eraserStrokes: Stroke[] = [];
+    const penStrokes = [];
+    const eraserStrokes = [];
     
     this.strokes.forEach(stroke => {
       if (stroke.type === 'pen') {
@@ -473,7 +449,7 @@ export class PenTool {
     // that came AFTER this pen stroke (newer erasers affect older pen strokes)
     penStrokes.forEach((penStroke, penIndex) => {
       // Clone the pen stroke
-      const penElement = penStroke.element.cloneNode(true) as SVGPathElement;
+      const penElement = penStroke.element.cloneNode(true);
       
       // Get all eraser strokes that came after this pen stroke
       const applicableErasers = eraserStrokes.filter(
@@ -497,7 +473,7 @@ export class PenTool {
         
         // Add each applicable eraser to the mask as black (transparent) areas
         applicableErasers.forEach(eraser => {
-          const eraserPath = eraser.element.cloneNode(true) as SVGPathElement;
+          const eraserPath = eraser.element.cloneNode(true);
           eraserPath.setAttribute('stroke', 'black'); // In masks, black means transparent
           eraserPath.setAttribute('stroke-width', this.eraserWidth.toString());
           mask.appendChild(eraserPath);
@@ -523,7 +499,7 @@ export class PenTool {
   /**
    * Hide eraser indicator
    */
-  private hideEraserIndicator(): void {
+  hideEraserIndicator() {
     if (this.eraserIndicator && this.eraserIndicator.parentNode) {
       this.eraserIndicator.parentNode.removeChild(this.eraserIndicator);
       this.eraserIndicator = null;
@@ -533,7 +509,7 @@ export class PenTool {
   /**
    * Show a visual indicator for the eraser cursor
    */
-  private showEraserIndicator(x: number, y: number): void {
+  showEraserIndicator(x, y) {
     const eraserRadius = this.eraserWidth / 2;
     
     if (!this.eraserIndicator) {
@@ -553,7 +529,7 @@ export class PenTool {
   /**
    * Clear all drawings
    */
-  public clearAll(): void {
+  clearAll() {
     // Clear drawing container
     while (this.drawingContainer.firstChild) {
       this.drawingContainer.removeChild(this.drawingContainer.firstChild);
@@ -576,7 +552,7 @@ export class PenTool {
   /**
    * Update pen tool options
    */
-  public updateOptions(options: Partial<PenToolOptions>): void {
+  updateOptions(options) {
     if (options.lineWidth !== undefined) {
       this.lineWidth = options.lineWidth;
     }
@@ -604,7 +580,7 @@ export class PenTool {
   /**
    * Get SVG icon for pen tool
    */
-  private getPenIcon(): string {
+  getPenIcon() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
@@ -618,7 +594,7 @@ export class PenTool {
   /**
    * Get SVG icon for eraser tool
    */
-  private getEraserIcon(): string {
+  getEraserIcon() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -632,7 +608,7 @@ export class PenTool {
   /**
    * Get SVG icon for clear tool
    */
-  private getClearIcon(): string {
+  getClearIcon() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>

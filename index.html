@@ -4,9 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SVG Kalem Aracı Denemesi</title>
+    <link rel="stylesheet" href="./style.css"> <!-- Added CSS link -->
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+      <div class="drawing-container">
+        <div id="drawing-area" class="drawing-area">
+          <div class="content">
+            <h3>Çizim bölgesi</h3>
+          </div>
+        </div>
+      </div>
+
+    <script type="module" src="./pen-tool.js"></script> <!-- Importing the PenTool module -->
+    <script type="module">
+      import { PenTool } from './pen-tool.js'; // Import PenTool
+
+      // Initialize pen tool
+      const drawingArea = document.querySelector('#drawing-area');
+
+      const penToolOptions = {
+        targetElement: drawingArea,
+        lineWidth: 3,
+        lineColor: '#000000',
+        toolPosition: 'top', // 'left', 'right', 'bottom', 'top'
+        zIndex: 10,
+        eraserWidth: 50
+      };
+
+      new PenTool(penToolOptions);
+    </script>
   </body>
 </html>
