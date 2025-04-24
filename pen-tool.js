@@ -29,6 +29,8 @@ export class PenTool {
   zIndex;
   currentTool = 'pen';
   eraserWidth;
+  themeToggle;
+  isDarkMode = false;
 
   constructor(options) {
     // Initialize with default values or provided options
@@ -38,6 +40,7 @@ export class PenTool {
     this.toolPosition = options.toolPosition || 'top';
     this.zIndex = options.zIndex || 10;
     this.eraserWidth = options.eraserWidth || 15;
+    this.themeToggle = options.themeToggle !== undefined ? options.themeToggle : false;
 
     this.initialize();
   }
@@ -50,6 +53,11 @@ export class PenTool {
     const computedStyle = window.getComputedStyle(this.targetElement);
     if (computedStyle.position === 'static') {
       this.targetElement.style.position = 'relative';
+    }
+
+    // Apply theme if dark mode is enabled
+    if (this.isDarkMode && this.themeToggle) {
+      this.targetElement.classList.add('pen-tool-dark-mode');
     }
 
     // Create SVG element that will contain all drawings
@@ -143,6 +151,15 @@ export class PenTool {
       { name: 'clear', icon: this.getClearIcon(), title: 'Tümünü Temizle' }
     ];
     
+    // Add theme toggle if enabled
+    if (this.themeToggle) {
+      tools.push({
+        name: 'theme', 
+        icon: this.getThemeToggleIcon(), 
+        title: this.isDarkMode ? 'Açık Tema' : 'Koyu Tema'
+      });
+    }
+    
     tools.forEach(tool => {
       const button = document.createElement('button');
       button.innerHTML = tool.icon;
@@ -184,6 +201,36 @@ export class PenTool {
       } else if (tool.name === 'clear') {
         // Add clear functionality
         button.addEventListener('click', () => this.clearAll());
+      } else if (tool.name === 'theme') {
+        // Add theme toggle functionality
+        button.addEventListener('click', () => {
+          this.isDarkMode = !this.isDarkMode;
+          button.innerHTML = this.getThemeToggleIcon();
+          button.title = this.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
+          
+          // Toggle theme class and apply styles immediately
+          if (this.isDarkMode) {
+            // Apply dark mode to both the targetElement and document body
+            this.targetElement.classList.add('pen-tool-dark-mode');
+            document.body.classList.add('pen-tool-dark-mode');
+            this.toolbar.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';
+            // Update button colors to show in dark mode
+            const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+            buttons.forEach(btn => {
+              btn.style.color = 'white';
+            });
+          } else {
+            // Remove dark mode from both elements
+            this.targetElement.classList.remove('pen-tool-dark-mode');
+            document.body.classList.remove('pen-tool-dark-mode');
+            this.toolbar.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            // Reset button colors for light mode
+            const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+            buttons.forEach(btn => {
+              btn.style.color = '';
+            });
+          }
+        });
       }
       
       this.toolbar.appendChild(button);
@@ -196,6 +243,19 @@ export class PenTool {
         background-color: rgba(0, 0, 0, 0.2) !important;
         box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
         transform: scale(0.95);
+      }
+      
+      .pen-tool-dark-mode .pen-tool-toolbar {
+        background-color: rgba(50, 50, 50, 0.85) !important;
+      }
+      
+      .pen-tool-dark-mode .pen-tool-button {
+        color: white !important;
+      }
+      
+      .pen-tool-dark-mode .pen-tool-button.active {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
       }
     `;
     document.head.appendChild(style);
@@ -615,5 +675,35 @@ export class PenTool {
         <line x1="8" y1="12" x2="16" y2="12"></line>
       </svg>
     `;
+  }
+
+  /**
+   * Get SVG icon for theme toggle
+   */
+  getThemeToggleIcon() {
+    // Different icon based on current theme
+    if (this.isDarkMode) {
+      // Sun icon for light mode
+      return `
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      `;
+    } else {
+      // Moon icon for dark mode
+      return `
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      `;
+    }
   }
 }
