@@ -26,10 +26,11 @@
         targetElement: drawingArea,
         lineWidth: 3,
         lineColor: '#000000',
-        toolPosition: 'top', // 'left', 'right', 'bottom', 'top'
+        toolPosition: 'left', // 'left', 'right', 'bottom', 'top'
         zIndex: 10,
         eraserWidth: 50,
-        themeToggle: true // Enable the theme toggle button
+        themeToggle: true, // Enable the theme toggle button
+        themeSetting: 'system' // 'dark', 'light', or 'system'
       };
 
       new PenTool(penToolOptions);

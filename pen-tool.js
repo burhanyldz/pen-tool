@@ -30,6 +30,7 @@ export class PenTool {
   currentTool = 'pen';
   eraserWidth;
   themeToggle;
+  themeSetting;
   isDarkMode = false;
 
   constructor(options) {
@@ -41,6 +42,17 @@ export class PenTool {
     this.zIndex = options.zIndex || 10;
     this.eraserWidth = options.eraserWidth || 15;
     this.themeToggle = options.themeToggle !== undefined ? options.themeToggle : false;
+    this.themeSetting = options.themeSetting || 'system';
+    
+    // Set initial dark mode state based on themeSetting
+    if (this.themeSetting === 'dark') {
+      this.isDarkMode = true;
+    } else if (this.themeSetting === 'light') {
+      this.isDarkMode = false;
+    } else if (this.themeSetting === 'system') {
+      // Check system preference
+      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
 
     this.initialize();
   }
@@ -54,10 +66,24 @@ export class PenTool {
     if (computedStyle.position === 'static') {
       this.targetElement.style.position = 'relative';
     }
-
-    // Apply theme if dark mode is enabled
-    if (this.isDarkMode && this.themeToggle) {
-      this.targetElement.classList.add('pen-tool-dark-mode');
+    
+    // Add system theme change listener if themeSetting is 'system'
+    if (this.themeSetting === 'system' && window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (this.themeSetting === 'system') { // Only respond if still using system setting
+          this.isDarkMode = e.matches;
+          this.applyTheme();
+          
+          // Update theme toggle button icon if it exists
+          if (this.themeToggle) {
+            const themeButton = this.toolbar.querySelector('[data-tool="theme"]');
+            if (themeButton) {
+              themeButton.innerHTML = this.getThemeToggleIcon();
+              themeButton.title = this.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
+            }
+          }
+        }
+      });
     }
 
     // Create SVG element that will contain all drawings
@@ -91,6 +117,9 @@ export class PenTool {
 
     // Set pointer events to auto since pen is selected by default
     this.svg.style.pointerEvents = 'auto';
+    
+    // Apply the theme based on the isDarkMode setting
+    this.applyTheme();
   }
 
   /**
@@ -165,6 +194,7 @@ export class PenTool {
       button.innerHTML = tool.icon;
       button.title = tool.title;
       button.className = 'pen-tool-button';
+      button.dataset.tool = tool.name; // Add data-tool attribute for easier selection
       button.style.background = 'none';
       button.style.border = 'none';
       button.style.cursor = 'pointer';
@@ -204,32 +234,18 @@ export class PenTool {
       } else if (tool.name === 'theme') {
         // Add theme toggle functionality
         button.addEventListener('click', () => {
+          // Toggle dark mode
           this.isDarkMode = !this.isDarkMode;
+          
+          // When user manually toggles theme, we're no longer following system preference
+          this.themeSetting = this.isDarkMode ? 'dark' : 'light';
+          
+          // Update button
           button.innerHTML = this.getThemeToggleIcon();
           button.title = this.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
           
-          // Toggle theme class and apply styles immediately
-          if (this.isDarkMode) {
-            // Apply dark mode to both the targetElement and document body
-            this.targetElement.classList.add('pen-tool-dark-mode');
-            document.body.classList.add('pen-tool-dark-mode');
-            this.toolbar.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';
-            // Update button colors to show in dark mode
-            const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-            buttons.forEach(btn => {
-              btn.style.color = 'white';
-            });
-          } else {
-            // Remove dark mode from both elements
-            this.targetElement.classList.remove('pen-tool-dark-mode');
-            document.body.classList.remove('pen-tool-dark-mode');
-            this.toolbar.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-            // Reset button colors for light mode
-            const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-            buttons.forEach(btn => {
-              btn.style.color = '';
-            });
-          }
+          // Apply the theme using our consistent theme method
+          this.applyTheme();
         });
       }
       
@@ -704,6 +720,39 @@ export class PenTool {
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       `;
+    }
+  }
+
+  /**
+   * Apply the current theme based on isDarkMode state
+   */
+  applyTheme() {
+    if (this.isDarkMode) {
+      // Apply dark mode
+      this.targetElement.classList.add('pen-tool-dark-mode');
+      document.body.classList.add('pen-tool-dark-mode');
+      
+      // Update toolbar styles
+      if (this.toolbar) {
+        this.toolbar.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';
+        const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+        buttons.forEach(btn => {
+          btn.style.color = 'white';
+        });
+      }
+    } else {
+      // Apply light mode
+      this.targetElement.classList.remove('pen-tool-dark-mode');
+      document.body.classList.remove('pen-tool-dark-mode');
+      
+      // Update toolbar styles
+      if (this.toolbar) {
+        this.toolbar.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+        buttons.forEach(btn => {
+          btn.style.color = '';
+        });
+      }
     }
   }
 }
