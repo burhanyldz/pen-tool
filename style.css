@@ -65,7 +65,6 @@ body:not(.pen-tool-dark-mode) button {
   margin: 1rem 0;
   position: relative;
   overflow: hidden;
-  background-color: rgba(100, 108, 255, 0.1);
 }
 
 .drawing-area .content {

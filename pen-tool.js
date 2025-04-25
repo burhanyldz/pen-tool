@@ -672,11 +672,9 @@ export class PenTool {
    */
   getEraserIcon() {
     return `
-      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-        <path d="M15.5 2H18a2 2 0 0 1 2 2v2.5"></path>
-        <path d="M22 14L10 2"></path>
-        <path d="M14 18l-4-4"></path>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.5 20H21v2h-7l3.5-2z" fill="none" stroke="currentColor"/>
+        <path d="M4.5 22l-2.1-2.1a3.5 3.5 0 0 1 .1-4.9l11.1-11.5a3.5 3.5 0 0 1 5 0l3.1 3.1a3.5 3.5 0 0 1 0 5L11.5 22h-7z" fill="none" stroke="currentColor"/>
       </svg>
     `;
   }
