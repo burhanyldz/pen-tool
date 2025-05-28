@@ -67,6 +67,11 @@ export class PenTool {
       this.targetElement.style.position = 'relative';
     }
     
+    // Add touch-specific CSS to prevent interference
+    this.targetElement.style.touchAction = 'none';
+    this.targetElement.style.userSelect = 'none';
+    this.targetElement.style.webkitUserSelect = 'none';
+    
     // Add system theme change listener if themeSetting is 'system'
     if (this.themeSetting === 'system' && window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -95,6 +100,13 @@ export class PenTool {
     this.svg.style.left = '0';
     this.svg.style.pointerEvents = 'none'; // Allow clicks to pass through when not drawing
     this.svg.style.zIndex = this.zIndex.toString();
+    
+    // Add touch-specific CSS properties
+    this.svg.style.touchAction = 'none'; // Prevent default touch behaviors
+    this.svg.style.userSelect = 'none'; // Prevent text selection
+    this.svg.style.webkitUserSelect = 'none';
+    this.svg.style.mozUserSelect = 'none';
+    this.svg.style.msUserSelect = 'none';
     
     // Create a container group for all drawings and erasers
     this.drawingContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -203,10 +215,12 @@ export class PenTool {
       button.style.margin = '3px';
       button.style.padding = '5px';
       button.style.borderRadius = '3px';
+      button.style.touchAction = 'manipulation'; // Improve touch responsiveness
+      button.style.userSelect = 'none'; // Prevent text selection on touch
       
       // Add active state for pen and eraser
       if (tool.name === 'pen' || tool.name === 'eraser') {
-        button.addEventListener('click', () => {
+        const handleToolSelect = () => {
           // Remove active class from all buttons
           const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
           buttons.forEach(btn => btn.classList.remove('active'));
@@ -220,8 +234,16 @@ export class PenTool {
           // Enable pointer events on SVG when a drawing tool is selected
           this.svg.style.pointerEvents = 'auto';
           
-          // Hide eraser indicator if switching tools
-          this.hideEraserIndicator();
+          // Hide eraser indicator when switching tools
+          if (tool.name !== 'eraser') {
+            this.hideEraserIndicator();
+          }
+        };
+        
+        button.addEventListener('click', handleToolSelect);
+        button.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          handleToolSelect();
         });
         
         // Set pen as active by default
@@ -230,10 +252,15 @@ export class PenTool {
         }
       } else if (tool.name === 'clear') {
         // Add clear functionality
-        button.addEventListener('click', () => this.clearAll());
+        const handleClear = () => this.clearAll();
+        button.addEventListener('click', handleClear);
+        button.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          handleClear();
+        });
       } else if (tool.name === 'theme') {
         // Add theme toggle functionality
-        button.addEventListener('click', () => {
+        const handleThemeToggle = () => {
           // Toggle dark mode
           this.isDarkMode = !this.isDarkMode;
           
@@ -246,6 +273,12 @@ export class PenTool {
           
           // Apply the theme using our consistent theme method
           this.applyTheme();
+        };
+        
+        button.addEventListener('click', handleThemeToggle);
+        button.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          handleThemeToggle();
         });
       }
       
@@ -284,11 +317,21 @@ export class PenTool {
     // Mouse events
     this.svg.addEventListener('mousedown', this.handleDrawStart.bind(this));
     this.svg.addEventListener('mousemove', this.handleDrawMove.bind(this));
+    this.svg.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
     window.addEventListener('mouseup', this.handleDrawEnd.bind(this));
     
-    // Touch events for mobile support
+    // Touch events for mobile support - try multiple approaches
     this.svg.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
     this.svg.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    
+    // Add touch events to target element as fallback
+    this.targetElement.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+    this.targetElement.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    
+    // Also add touchmove to document and window as fallback
+    document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    window.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    
     window.addEventListener('touchend', this.handleTouchEnd.bind(this));
     window.addEventListener('touchcancel', this.handleTouchEnd.bind(this));
   }
@@ -316,16 +359,30 @@ export class PenTool {
    * Handle movement during drawing (mousemove)
    */
   handleDrawMove(event) {
-    if (!this.isDrawing) return;
-    
     const rect = this.svg.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    
+    // Show eraser indicator when eraser tool is active, even when not drawing
+    if (this.currentTool === 'eraser') {
+      this.showEraserIndicator(x, y);
+    }
+    
+    if (!this.isDrawing) return;
     
     if (this.currentTool === 'pen') {
       this.continueDrawing(x, y);
     } else if (this.currentTool === 'eraser') {
       this.continueErasing(x, y);
+    }
+  }
+
+  /**
+   * Handle mouse leaving the SVG area
+   */
+  handleMouseLeave() {
+    if (this.currentTool === 'eraser' && !this.isDrawing) {
+      this.hideEraserIndicator();
     }
   }
 
@@ -366,6 +423,7 @@ export class PenTool {
     if (event.touches.length !== 1) return;
     
     event.preventDefault();
+    event.stopPropagation();
     
     const touch = event.touches[0];
     const rect = this.svg.getBoundingClientRect();
@@ -385,14 +443,22 @@ export class PenTool {
    * Handle touch move event
    */
   handleTouchMove(event) {
-    if (!this.isDrawing || event.touches.length !== 1) return;
+    if (event.touches.length !== 1) return;
     
     event.preventDefault();
+    event.stopPropagation();
     
     const touch = event.touches[0];
     const rect = this.svg.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
+    
+    // Show eraser indicator when eraser tool is active, even when not drawing
+    if (this.currentTool === 'eraser') {
+      this.showEraserIndicator(x, y);
+    }
+    
+    if (!this.isDrawing) return;
     
     if (this.currentTool === 'pen') {
       this.continueDrawing(x, y);
@@ -418,6 +484,8 @@ export class PenTool {
     this.currentPath.setAttribute('fill', 'none');
     this.currentPath.setAttribute('stroke-linecap', 'round');
     this.currentPath.setAttribute('stroke-linejoin', 'round');
+    this.currentPath.style.pointerEvents = 'none'; // Prevent paths from blocking touch events
+    this.currentPath.setAttribute('pointer-events', 'none');
     
     this.currentPathData = `M ${x} ${y}`;
     this.currentPath.setAttribute('d', this.currentPathData);
@@ -449,6 +517,8 @@ export class PenTool {
     this.currentPath.setAttribute('fill', 'none');
     this.currentPath.setAttribute('stroke-linecap', 'round');
     this.currentPath.setAttribute('stroke-linejoin', 'round');
+    this.currentPath.style.pointerEvents = 'none'; // Prevent eraser paths from blocking touch events
+    this.currentPath.setAttribute('pointer-events', 'none');
     
     this.currentPathData = `M ${x} ${y}`;
     this.currentPath.setAttribute('d', this.currentPathData);
@@ -472,7 +542,9 @@ export class PenTool {
    * Continue erasing to the specified coordinates
    */
   continueErasing(x, y) {
-    if (!this.currentPath) return;
+    if (!this.currentPath) {
+      return;
+    }
     
     this.showEraserIndicator(x, y);
     
@@ -526,6 +598,9 @@ export class PenTool {
     penStrokes.forEach((penStroke, penIndex) => {
       // Clone the pen stroke
       const penElement = penStroke.element.cloneNode(true);
+      // Ensure cloned elements don't block touch events
+      penElement.style.pointerEvents = 'none';
+      penElement.setAttribute('pointer-events', 'none');
       
       // Get all eraser strokes that came after this pen stroke
       const applicableErasers = eraserStrokes.filter(
@@ -552,6 +627,8 @@ export class PenTool {
           const eraserPath = eraser.element.cloneNode(true);
           eraserPath.setAttribute('stroke', 'black'); // In masks, black means transparent
           eraserPath.setAttribute('stroke-width', this.eraserWidth.toString());
+          eraserPath.style.pointerEvents = 'none';
+          eraserPath.setAttribute('pointer-events', 'none');
           mask.appendChild(eraserPath);
         });
         
@@ -561,6 +638,7 @@ export class PenTool {
         // Create a group with the mask and add the pen stroke to it
         const maskedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         maskedGroup.setAttribute('mask', `url(#${maskId})`);
+        maskedGroup.style.pointerEvents = 'none';
         maskedGroup.appendChild(penElement);
         
         // Add the masked group to the drawing container
@@ -594,6 +672,7 @@ export class PenTool {
       this.eraserIndicator.setAttribute('stroke', 'rgba(255, 0, 0, 0.5)');
       this.eraserIndicator.setAttribute('stroke-width', '1');
       this.eraserIndicator.style.pointerEvents = 'none';
+      this.eraserIndicator.setAttribute('pointer-events', 'none');
       this.svg.appendChild(this.eraserIndicator);
     }
     
