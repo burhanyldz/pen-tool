@@ -62,6 +62,9 @@ export class PenTool {
    * Initialize the pen tool with SVG canvas and toolbar
    */
   initialize() {
+    // Inject required CSS styles
+    this.injectCSS();
+    
     // Set position relative on target if not already
     const computedStyle = window.getComputedStyle(this.targetElement);
     if (computedStyle.position === 'static') {
@@ -299,30 +302,6 @@ export class PenTool {
       
       this.toolbar.appendChild(button);
     });
-    
-    // Add CSS for active state
-    const style = document.createElement('style');
-    style.textContent = `
-      .pen-tool-button.active {
-        background-color: rgba(0, 0, 0, 0.2) !important;
-        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
-        transform: scale(0.95);
-      }
-      
-      .pen-tool-dark-mode .pen-tool-toolbar {
-        background-color: rgba(50, 50, 50, 0.85) !important;
-      }
-      
-      .pen-tool-dark-mode .pen-tool-button {
-        color: white !important;
-      }
-      
-      .pen-tool-dark-mode .pen-tool-button.active {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   /**
@@ -763,6 +742,62 @@ export class PenTool {
   }
 
   /**
+   * Inject required CSS styles into the document head
+   */
+  injectCSS() {
+    // Check if styles have already been injected to avoid duplicates
+    if (document.getElementById('pen-tool-styles')) {
+      return;
+    }
+
+    const style = document.createElement('style');
+    style.id = 'pen-tool-styles';
+    style.textContent = `
+      /* Essential Pen Tool Styles Only */
+      .pen-tool-button.active {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+        transform: scale(0.95);
+      }
+      
+      .pen-tool-dark-mode .pen-tool-toolbar {
+        background-color: rgba(50, 50, 50, 0.85) !important;
+      }
+      
+      .pen-tool-dark-mode .pen-tool-button {
+        color: white !important;
+      }
+      
+      .pen-tool-dark-mode .pen-tool-button.active {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+
+      /* Hand tool specific styles */
+      .pen-tool-hand-mode {
+        cursor: grab !important;
+        touch-action: auto !important;
+        user-select: auto !important;
+      }
+
+      .pen-tool-hand-mode:active {
+        cursor: grabbing !important;
+      }
+
+      /* Ensure the drawing area shows the proper cursor when hand tool is active */
+      .pen-tool-hand-mode * {
+        cursor: grab !important;
+      }
+
+      .pen-tool-hand-mode:active * {
+        cursor: grabbing !important;
+      }
+    `;
+    
+    document.head.appendChild(style);
+  }
+
+  /**
    * Get SVG icon for pen tool
    */
   getPenIcon() {
@@ -781,7 +816,7 @@ export class PenTool {
    */
   getEraserIcon() {
     return `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.5 20H21v2h-7l3.5-2z" fill="none" stroke="currentColor"/>
         <path d="M4.5 22l-2.1-2.1a3.5 3.5 0 0 1 .1-4.9l11.1-11.5a3.5 3.5 0 0 1 5 0l3.1 3.1a3.5 3.5 0 0 1 0 5L11.5 22h-7z" fill="none" stroke="currentColor"/>
       </svg>

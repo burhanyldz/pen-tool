@@ -4,7 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SVG Kalem Aracı Denemesi</title>
-    <link rel="stylesheet" href="./style.css"> <!-- Added CSS link -->
+    <!-- Demo styles for this example page only -->
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        place-items: center;
+        min-width: 320px;
+        min-height: 100vh;
+        font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        font-weight: 400;
+        color: #213547;
+        background-color: #ffffff;
+      }
+
+      .drawing-container {
+        margin-top: 2rem;
+        width: 100%;
+        margin-left: 20px;
+        margin-right: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .drawing-area {
+        width: 100%;
+        height: 500px;
+        border: 2px solid #646cff;
+        border-radius: 8px;
+        margin: 1rem 0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .drawing-area .content {
+        padding: 1rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+      }
+
+      /* Dark mode demo styles */
+      .pen-tool-dark-mode {
+        color: rgba(255, 255, 255, 0.87) !important;
+        background-color: #242424 !important;
+      }
+    </style>
   </head>
   <body>
       <div class="drawing-container">
@@ -23,13 +72,13 @@
       const drawingArea = document.querySelector('#drawing-area');
 
       const penToolOptions = {
-        targetElement: drawingArea,
-        lineWidth: 3,
-        lineColor: '#000000',
+        targetElement: drawingArea, // The container where the pen tool will be initialized
+        lineWidth: 3, // Default line width
+        lineColor: '#000000', // Default line color
         toolPosition: 'left', // 'left', 'right', 'bottom', 'top'
-        zIndex: 10,
-        eraserWidth: 50,
-        themeToggle: true, // Enable the theme toggle button
+        zIndex: 10, // z-index for the tool
+        eraserWidth: 50, // Width of the eraser
+        themeToggle: false, // Enable the theme toggle button
         themeSetting: 'light' // 'dark', 'light', or 'system'
       };
 
