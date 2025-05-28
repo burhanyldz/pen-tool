@@ -75,3 +75,29 @@ body:not(.pen-tool-dark-mode) button {
   justify-content: center;
   height: 100%;
 }
+
+/* Hand tool specific styles */
+.pen-tool-hand-mode {
+  cursor: grab !important;
+}
+
+.pen-tool-hand-mode:active {
+  cursor: grabbing !important;
+}
+
+/* Ensure the drawing area shows the proper cursor when hand tool is active */
+.drawing-area.pen-tool-hand-mode,
+.drawing-area.pen-tool-hand-mode * {
+  cursor: grab !important;
+}
+
+.drawing-area.pen-tool-hand-mode:active,
+.drawing-area.pen-tool-hand-mode:active * {
+  cursor: grabbing !important;
+}
+
+/* Add visual feedback for enabled touch gestures */
+.pen-tool-hand-mode {
+  touch-action: auto !important;
+  user-select: auto !important;
+}

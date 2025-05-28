@@ -5,6 +5,7 @@
  * - SVG-based drawing for resolution independence
  * - Drawing on target div with support for zoom and pan
  * - Eraser functionality with temporal hierarchy
+ * - Hand tool for touch gestures (pinch zoom, pan) without drawing
  * - Clean all option
  * - Simple tool buttons with icons
  * - Developer customization options
@@ -189,6 +190,7 @@ export class PenTool {
     const tools = [
       { name: 'pen', icon: this.getPenIcon(), title: 'Kalem Aracı' },
       { name: 'eraser', icon: this.getEraserIcon(), title: 'Silgi Aracı' },
+      { name: 'hand', icon: this.getHandIcon(), title: 'El Aracı - Dokunmatik Hareketler İçin (Pinch/Pan)' },
       { name: 'clear', icon: this.getClearIcon(), title: 'Tümünü Temizle' }
     ];
     
@@ -218,8 +220,8 @@ export class PenTool {
       button.style.touchAction = 'manipulation'; // Improve touch responsiveness
       button.style.userSelect = 'none'; // Prevent text selection on touch
       
-      // Add active state for pen and eraser
-      if (tool.name === 'pen' || tool.name === 'eraser') {
+      // Add active state for pen, eraser, and hand tools
+      if (tool.name === 'pen' || tool.name === 'eraser' || tool.name === 'hand') {
         const handleToolSelect = () => {
           // Remove active class from all buttons
           const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
@@ -231,8 +233,21 @@ export class PenTool {
           // Set current tool
           this.currentTool = tool.name;
           
-          // Enable pointer events on SVG when a drawing tool is selected
-          this.svg.style.pointerEvents = 'auto';
+          // Configure SVG pointer events based on tool
+          if (tool.name === 'hand') {
+            // For hand tool, allow normal touch events to pass through for pan/zoom
+            this.svg.style.pointerEvents = 'none';
+            // Enable default touch behaviors for the target element
+            this.targetElement.style.touchAction = 'auto';
+            // Add hand tool CSS class for visual feedback
+            this.targetElement.classList.add('pen-tool-hand-mode');
+          } else {
+            // For drawing tools, capture events
+            this.svg.style.pointerEvents = 'auto';
+            this.targetElement.style.touchAction = 'none';
+            // Remove hand tool CSS class
+            this.targetElement.classList.remove('pen-tool-hand-mode');
+          }
           
           // Hide eraser indicator when switching tools
           if (tool.name !== 'eraser') {
@@ -340,6 +355,9 @@ export class PenTool {
    * Handle start of drawing (mousedown)
    */
   handleDrawStart(event) {
+    // Don't draw if hand tool is active
+    if (this.currentTool === 'hand') return;
+    
     event.preventDefault();
     
     const rect = this.svg.getBoundingClientRect();
@@ -359,6 +377,9 @@ export class PenTool {
    * Handle movement during drawing (mousemove)
    */
   handleDrawMove(event) {
+    // Don't handle drawing for hand tool
+    if (this.currentTool === 'hand') return;
+    
     const rect = this.svg.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -420,6 +441,9 @@ export class PenTool {
    * Handle touch start event
    */
   handleTouchStart(event) {
+    // Allow multi-touch for hand tool (pinch zoom)
+    if (this.currentTool === 'hand') return;
+    
     if (event.touches.length !== 1) return;
     
     event.preventDefault();
@@ -443,6 +467,9 @@ export class PenTool {
    * Handle touch move event
    */
   handleTouchMove(event) {
+    // Allow default touch behaviors for hand tool
+    if (this.currentTool === 'hand') return;
+    
     if (event.touches.length !== 1) return;
     
     event.preventDefault();
@@ -471,6 +498,9 @@ export class PenTool {
    * Handle touch end event
    */
   handleTouchEnd() {
+    // Don't handle draw end for hand tool
+    if (this.currentTool === 'hand') return;
+    
     this.handleDrawEnd();
   }
 
@@ -754,6 +784,20 @@ export class PenTool {
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.5 20H21v2h-7l3.5-2z" fill="none" stroke="currentColor"/>
         <path d="M4.5 22l-2.1-2.1a3.5 3.5 0 0 1 .1-4.9l11.1-11.5a3.5 3.5 0 0 1 5 0l3.1 3.1a3.5 3.5 0 0 1 0 5L11.5 22h-7z" fill="none" stroke="currentColor"/>
+      </svg>
+    `;
+  }
+
+  /**
+   * Get SVG icon for hand tool
+   */
+  getHandIcon() {
+    return `
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 11V6a2 2 0 0 0-4 0v5"/>
+        <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
+        <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L8 15"/>
       </svg>
     `;
   }
