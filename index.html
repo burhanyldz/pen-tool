@@ -59,8 +59,31 @@
       <div class="drawing-container">
         <div id="drawing-area" class="drawing-area">
           <div class="content">
-            <h3>Çizim bölgesi</h3>
+            <h3>Drawing Area</h3>
           </div>
+        </div>
+        <div class="controls" style="margin-top: 20px; text-align: center;">
+          <button id="toggle-pen-tool" style="padding: 8px 16px; background-color: #646cff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Disable Pen Tool
+          </button>
+          <button id="switch-to-pen" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Switch to Pen
+          </button>
+          <button id="switch-to-eraser" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Switch to Eraser
+          </button>
+          <button id="switch-to-hand" style="padding: 8px 16px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Switch to Hand
+          </button>
+          <button id="erase-all" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Erase All
+          </button>
+          <button id="init-pen-tool" style="padding: 8px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Init Pen Tool
+          </button>
+          <button id="destroy-pen-tool" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+            Destroy Pen Tool
+          </button>
         </div>
       </div>
 
@@ -82,7 +105,53 @@
         themeSetting: 'light' // 'dark', 'light', or 'system'
       };
 
-      new PenTool(penToolOptions);
+      const penToolInstance = new PenTool(penToolOptions);
+      
+      // Initialize the pen tool manually
+      //penToolInstance.init();
+
+      // Toggle button functionality
+      const toggleButton = document.getElementById('toggle-pen-tool');
+      let penToolEnabled = true;
+
+      toggleButton.addEventListener('click', () => {
+        // Use the new toggle method to switch the pen tool's state
+        penToolEnabled = penToolInstance.toggle();
+        toggleButton.textContent = penToolEnabled ? 'Disable Pen Tool' : 'Enable Pen Tool';
+      });
+
+      // Tool switching buttons
+      document.getElementById('switch-to-pen').addEventListener('click', () => {
+        penToolInstance.switchToPenTool();
+        console.log('Switched to pen tool. Current tool:', penToolInstance.getCurrentTool());
+      });
+
+      document.getElementById('switch-to-eraser').addEventListener('click', () => {
+        penToolInstance.switchToEraserTool();
+        console.log('Switched to eraser tool. Current tool:', penToolInstance.getCurrentTool());
+      });
+
+      document.getElementById('switch-to-hand').addEventListener('click', () => {
+        penToolInstance.switchToHandTool();
+        console.log('Switched to hand tool. Current tool:', penToolInstance.getCurrentTool());
+      });
+
+      // Erase all button
+      document.getElementById('erase-all').addEventListener('click', () => {
+        penToolInstance.eraseAll();
+        console.log('All drawings erased');
+      });
+
+      // Init and destroy buttons
+      document.getElementById('init-pen-tool').addEventListener('click', () => {
+        penToolInstance.init();
+        console.log('Pen tool initialized');
+      });
+
+      document.getElementById('destroy-pen-tool').addEventListener('click', () => {
+        penToolInstance.destroy();
+        console.log('Pen tool destroyed');
+      });
     </script>
   </body>
 </html>

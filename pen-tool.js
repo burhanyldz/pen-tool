@@ -33,6 +33,7 @@ export class PenTool {
   themeToggle;
   themeSetting;
   isDarkMode = false;
+  isEnabled = true; // Track whether the pen tool is enabled
 
   constructor(options) {
     // Initialize with default values or provided options
@@ -55,13 +56,19 @@ export class PenTool {
       this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
-    this.initialize();
+    // Don't auto-initialize anymore - user must call init() manually
   }
 
   /**
    * Initialize the pen tool with SVG canvas and toolbar
+   * This method must be called manually after creating the PenTool instance
    */
-  initialize() {
+  init() {
+    if (this.svg || this.toolbar) {
+      console.warn('PenTool is already initialized. Call destroy() first if you want to reinitialize.');
+      return;
+    }
+
     // Inject required CSS styles
     this.injectCSS();
     
@@ -910,5 +917,240 @@ export class PenTool {
         });
       }
     }
+  }
+
+  /**
+   * Enable the pen tool and toolbar
+   * This makes the pen tool handle and toolbar visible and functional
+   */
+  enable() {
+    if (!this.svg || !this.toolbar) {
+      console.warn('PenTool is not initialized. Call init() first before enabling.');
+      return;
+    }
+    
+    this.isEnabled = true;
+    
+    // Make SVG element active again
+    if (this.svg) {
+      this.svg.style.display = 'block';
+      this.svg.style.pointerEvents = this.currentTool === 'hand' ? 'none' : 'auto';
+    }
+    
+    // Make toolbar visible
+    if (this.toolbar) {
+      this.toolbar.style.display = 'flex';
+    }
+    
+    // Re-add event listeners if they were removed
+    this.addEventListeners();
+  }
+
+  /**
+   * Disable the pen tool and toolbar
+   * This hides the pen tool handle and toolbar making them non-functional
+   */
+  disable() {
+    if (!this.svg || !this.toolbar) {
+      console.warn('PenTool is not initialized.');
+      return;
+    }
+    
+    this.isEnabled = false;
+    
+    // Make SVG element inactive
+    if (this.svg) {
+      this.svg.style.display = 'none';
+      this.svg.style.pointerEvents = 'none';
+    }
+    
+    // Hide toolbar
+    if (this.toolbar) {
+      this.toolbar.style.display = 'none';
+    }
+    
+    // End any ongoing drawing operation
+    this.isDrawing = false;
+    this.currentPath = null;
+    this.hideEraserIndicator();
+    
+    // Remove event listeners to prevent any drawing
+    this.removeEventListeners();
+  }
+
+  /**
+   * Remove event listeners for mouse and touch events
+   * Used when disabling the pen tool
+   */
+  removeEventListeners() {
+    if (!this.svg || !this.targetElement) return;
+    
+    // Mouse events
+    this.svg.removeEventListener('mousedown', this.handleDrawStart.bind(this));
+    this.svg.removeEventListener('mousemove', this.handleDrawMove.bind(this));
+    this.svg.removeEventListener('mouseleave', this.handleMouseLeave.bind(this));
+    window.removeEventListener('mouseup', this.handleDrawEnd.bind(this));
+    
+    // Touch events
+    this.svg.removeEventListener('touchstart', this.handleTouchStart.bind(this));
+    this.svg.removeEventListener('touchmove', this.handleTouchMove.bind(this));
+    this.targetElement.removeEventListener('touchstart', this.handleTouchStart.bind(this));
+    this.targetElement.removeEventListener('touchmove', this.handleTouchMove.bind(this));
+    document.removeEventListener('touchmove', this.handleTouchMove.bind(this));
+    window.removeEventListener('touchmove', this.handleTouchMove.bind(this));
+    window.removeEventListener('touchend', this.handleTouchEnd.bind(this));
+    window.removeEventListener('touchcancel', this.handleTouchEnd.bind(this));
+  }
+
+  /**
+   * Toggle the pen tool and toolbar visibility
+   * @returns {boolean} The new state (true for enabled, false for disabled)
+   */
+  toggle() {
+    if (this.isEnabled) {
+      this.disable();
+    } else {
+      this.enable();
+    }
+    return this.isEnabled;
+  }
+
+  /**
+   * Programmatically switch to pen tool
+   */
+  switchToPenTool() {
+    this.setActiveTool('pen');
+  }
+
+  /**
+   * Programmatically switch to eraser tool
+   */
+  switchToEraserTool() {
+    this.setActiveTool('eraser');
+  }
+
+  /**
+   * Programmatically switch to hand tool
+   */
+  switchToHandTool() {
+    this.setActiveTool('hand');
+  }
+
+  /**
+   * Helper method to set the active tool and update UI
+   * @param {string} toolName - The name of the tool ('pen', 'eraser', 'hand')
+   */
+  setActiveTool(toolName) {
+    if (!this.isEnabled) {
+      console.warn('PenTool is disabled. Enable it first before switching tools.');
+      return;
+    }
+
+    const validTools = ['pen', 'eraser', 'hand'];
+    if (!validTools.includes(toolName)) {
+      console.error(`Invalid tool name: ${toolName}. Valid tools are: ${validTools.join(', ')}`);
+      return;
+    }
+
+    // Update current tool
+    this.currentTool = toolName;
+
+    // Remove active class from all tool buttons
+    const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    // Add active class to the selected tool button
+    const targetButton = this.toolbar.querySelector(`[data-tool="${toolName}"]`);
+    if (targetButton) {
+      targetButton.classList.add('active');
+    }
+
+    // Configure SVG pointer events based on tool
+    if (toolName === 'hand') {
+      // For hand tool, allow normal touch events to pass through for pan/zoom
+      this.svg.style.pointerEvents = 'none';
+      // Enable default touch behaviors for the target element
+      this.targetElement.style.touchAction = 'auto';
+      // Add hand tool CSS class for visual feedback
+      this.targetElement.classList.add('pen-tool-hand-mode');
+    } else {
+      // For drawing tools, capture events
+      this.svg.style.pointerEvents = 'auto';
+      this.targetElement.style.touchAction = 'none';
+      // Remove hand tool CSS class
+      this.targetElement.classList.remove('pen-tool-hand-mode');
+    }
+
+    // Hide eraser indicator when switching away from eraser
+    if (toolName !== 'eraser') {
+      this.hideEraserIndicator();
+    }
+  }
+
+  /**
+   * Destroy the pen tool and clean up all elements and event listeners
+   * This completely removes the pen tool from the DOM and cleans up resources
+   */
+  destroy() {
+    // Remove event listeners first
+    this.removeEventListeners();
+    
+    // Remove SVG element from DOM
+    if (this.svg && this.svg.parentNode) {
+      this.svg.parentNode.removeChild(this.svg);
+    }
+    
+    // Remove toolbar from DOM
+    if (this.toolbar && this.toolbar.parentNode) {
+      this.toolbar.parentNode.removeChild(this.toolbar);
+    }
+    
+    // Remove hand tool mode class from target element
+    if (this.targetElement) {
+      this.targetElement.classList.remove('pen-tool-hand-mode');
+      // Reset target element styles
+      this.targetElement.style.touchAction = '';
+      this.targetElement.style.userSelect = '';
+      this.targetElement.style.webkitUserSelect = '';
+    }
+    
+    // Remove dark mode classes
+    if (this.targetElement) {
+      this.targetElement.classList.remove('pen-tool-dark-mode');
+    }
+    document.body.classList.remove('pen-tool-dark-mode');
+    
+    // Clear all references
+    this.svg = null;
+    this.toolbar = null;
+    this.drawingContainer = null;
+    this.eraserIndicator = null;
+    this.currentPath = null;
+    this.strokes = [];
+    this.temporaryEraserStroke = null;
+    
+    // Reset state
+    this.isDrawing = false;
+    this.currentPathData = '';
+    this.isEnabled = false;
+    this.currentTool = 'pen';
+    
+    console.log('PenTool destroyed successfully');
+  }
+
+  /**
+   * Programmatically erase all drawings
+   * This is an alias for clearAll() with a more descriptive name for programmatic use
+   */
+  eraseAll() {
+    this.clearAll();
+  }
+
+  /**
+   * Get the currently active tool
+   * @returns {string} The name of the currently active tool
+   */
+  getCurrentTool() {
+    return this.currentTool;
   }
 }
