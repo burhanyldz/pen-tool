@@ -29,6 +29,10 @@
     this.strokes = [];
     this.temporaryEraserStroke = null;
     
+    // Drag functionality properties
+    this.isDraggingToolbar = false;
+    this.dragOffset = { x: 0, y: 0 };
+    
     // Configuration options
     this.lineWidth = null;
     this.lineColor = null;
@@ -51,6 +55,11 @@
     this.boundHandleTouchEnd = null;
     this.boundSystemThemeChange = null;
     this.systemThemeMediaQuery = null;
+
+    // Bound functions for toolbar dragging
+    this.boundHandleToolbarDragStart = null;
+    this.boundHandleToolbarDragMove = null;
+    this.boundHandleToolbarDragEnd = null;
 
     // Initialize with default values or provided options
     this.targetElement = options.targetElement;
@@ -341,6 +350,145 @@
       
       this.toolbar.appendChild(button);
     }
+
+    // Add drag handle at the end of the toolbar
+    var dragHandle = document.createElement('div');
+    dragHandle.innerHTML = this.getDragIcon();
+    dragHandle.title = 'Araç Çubuğunu Sürükle';
+    dragHandle.className = 'pen-tool-drag-handle';
+    dragHandle.style.background = 'none';
+    dragHandle.style.border = 'none';
+    dragHandle.style.cursor = 'grab';
+    dragHandle.style.width = '30px';
+    dragHandle.style.height = '30px';
+    dragHandle.style.margin = '3px';
+    dragHandle.style.padding = '5px';
+    dragHandle.style.borderRadius = '3px';
+    dragHandle.style.display = 'flex';
+    dragHandle.style.alignItems = 'center';
+    dragHandle.style.justifyContent = 'center';
+    dragHandle.style.touchAction = 'none';
+    dragHandle.style.userSelect = 'none';
+    
+    // Add drag handle event listeners
+    this.addDragHandleListeners(dragHandle);
+    
+    this.toolbar.appendChild(dragHandle);
+  };
+
+  /**
+   * Add drag functionality to the drag handle
+   */
+  PenTool.prototype.addDragHandleListeners = function(dragHandle) {
+    var self = this;
+    
+    // Create bound function references for proper cleanup
+    this.boundHandleToolbarDragStart = function(e) { self.handleToolbarDragStart(e, dragHandle); };
+    this.boundHandleToolbarDragMove = function(e) { self.handleToolbarDragMove(e); };
+    this.boundHandleToolbarDragEnd = function(e) { self.handleToolbarDragEnd(e); };
+    
+    // Mouse events
+    dragHandle.addEventListener('mousedown', this.boundHandleToolbarDragStart);
+    
+    // Touch events
+    dragHandle.addEventListener('touchstart', this.boundHandleToolbarDragStart, { passive: false });
+  };
+
+  /**
+   * Handle start of toolbar dragging
+   */
+  PenTool.prototype.handleToolbarDragStart = function(event, dragHandle) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    this.isDraggingToolbar = true;
+    dragHandle.style.cursor = 'grabbing';
+    
+    var clientX, clientY;
+    if (event.type === 'touchstart') {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
+    
+    var toolbarRect = this.toolbar.getBoundingClientRect();
+    this.dragOffset.x = clientX - toolbarRect.left;
+    this.dragOffset.y = clientY - toolbarRect.top;
+    
+    // Add global event listeners for dragging
+    document.addEventListener('mousemove', this.boundHandleToolbarDragMove);
+    document.addEventListener('mouseup', this.boundHandleToolbarDragEnd);
+    document.addEventListener('touchmove', this.boundHandleToolbarDragMove, { passive: false });
+    document.addEventListener('touchend', this.boundHandleToolbarDragEnd);
+    document.addEventListener('touchcancel', this.boundHandleToolbarDragEnd);
+  };
+
+  /**
+   * Handle toolbar dragging movement
+   */
+  PenTool.prototype.handleToolbarDragMove = function(event) {
+    if (!this.isDraggingToolbar) return;
+    
+    event.preventDefault();
+    
+    var clientX, clientY;
+    if (event.type === 'touchmove') {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
+    
+    var targetRect = this.targetElement.getBoundingClientRect();
+    var toolbarRect = this.toolbar.getBoundingClientRect();
+    
+    // Calculate new position relative to the target element
+    var newX = clientX - targetRect.left - this.dragOffset.x;
+    var newY = clientY - targetRect.top - this.dragOffset.y;
+    
+    // Constrain to target element boundaries
+    var minX = 0;
+    var minY = 0;
+    var maxX = this.targetElement.offsetWidth - toolbarRect.width;
+    var maxY = this.targetElement.offsetHeight - toolbarRect.height;
+    
+    newX = Math.max(minX, Math.min(newX, maxX));
+    newY = Math.max(minY, Math.min(newY, maxY));
+    
+    // Reset all positioning styles and apply new position
+    this.toolbar.style.top = '';
+    this.toolbar.style.right = '';
+    this.toolbar.style.bottom = '';
+    this.toolbar.style.left = '';
+    this.toolbar.style.transform = '';
+    
+    this.toolbar.style.left = newX + 'px';
+    this.toolbar.style.top = newY + 'px';
+  };
+
+  /**
+   * Handle end of toolbar dragging
+   */
+  PenTool.prototype.handleToolbarDragEnd = function(event) {
+    if (!this.isDraggingToolbar) return;
+    
+    this.isDraggingToolbar = false;
+    
+    // Reset cursor
+    var dragHandle = this.toolbar.querySelector('.pen-tool-drag-handle');
+    if (dragHandle) {
+      dragHandle.style.cursor = 'grab';
+    }
+    
+    // Remove global event listeners
+    document.removeEventListener('mousemove', this.boundHandleToolbarDragMove);
+    document.removeEventListener('mouseup', this.boundHandleToolbarDragEnd);
+    document.removeEventListener('touchmove', this.boundHandleToolbarDragMove);
+    document.removeEventListener('touchend', this.boundHandleToolbarDragEnd);
+    document.removeEventListener('touchcancel', this.boundHandleToolbarDragEnd);
   };
 
   /**
@@ -863,6 +1011,21 @@
       .pen-tool-hand-mode:active * {
         cursor: grabbing !important;
       }
+
+      /* Drag handle specific styles */
+      .pen-tool-drag-handle {
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+      }
+
+      .pen-tool-drag-handle:hover {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.1) !important;
+      }
+
+      .pen-tool-dark-mode .pen-tool-drag-handle:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+      }
     `;
     
     document.head.appendChild(style);
@@ -951,6 +1114,22 @@
   };
 
   /**
+   * Get SVG icon for drag handle
+   */
+  PenTool.prototype.getDragIcon = function() {
+    return `
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="12" r="1"></circle>
+        <circle cx="9" cy="5" r="1"></circle>
+        <circle cx="9" cy="19" r="1"></circle>
+        <circle cx="15" cy="12" r="1"></circle>
+        <circle cx="15" cy="5" r="1"></circle>
+        <circle cx="15" cy="19" r="1"></circle>
+      </svg>
+    `;
+  };
+
+  /**
    * Apply the current theme based on isDarkMode state
    */
   PenTool.prototype.applyTheme = function() {
@@ -1008,6 +1187,12 @@
     
     // Re-add event listeners if they were removed
     this.addEventListeners();
+    
+    // Re-add drag handle listeners if they were removed
+    var dragHandle = this.toolbar.querySelector('.pen-tool-drag-handle');
+    if (dragHandle) {
+      this.addDragHandleListeners(dragHandle);
+    }
   };
 
   /**
@@ -1077,6 +1262,24 @@
       this.systemThemeMediaQuery.removeEventListener('change', this.boundSystemThemeChange);
     }
     
+    // Remove drag handle event listeners
+    var dragHandle = this.toolbar ? this.toolbar.querySelector('.pen-tool-drag-handle') : null;
+    if (dragHandle && this.boundHandleToolbarDragStart) {
+      dragHandle.removeEventListener('mousedown', this.boundHandleToolbarDragStart);
+      dragHandle.removeEventListener('touchstart', this.boundHandleToolbarDragStart);
+    }
+    
+    // Remove global drag event listeners if still active
+    if (this.boundHandleToolbarDragMove) {
+      document.removeEventListener('mousemove', this.boundHandleToolbarDragMove);
+      document.removeEventListener('touchmove', this.boundHandleToolbarDragMove);
+    }
+    if (this.boundHandleToolbarDragEnd) {
+      document.removeEventListener('mouseup', this.boundHandleToolbarDragEnd);
+      document.removeEventListener('touchend', this.boundHandleToolbarDragEnd);
+      document.removeEventListener('touchcancel', this.boundHandleToolbarDragEnd);
+    }
+    
     // Clear bound function references
     this.boundHandleDrawStart = null;
     this.boundHandleDrawMove = null;
@@ -1087,6 +1290,11 @@
     this.boundHandleTouchEnd = null;
     this.boundSystemThemeChange = null;
     this.systemThemeMediaQuery = null;
+    
+    // Clear drag-related bound function references
+    this.boundHandleToolbarDragStart = null;
+    this.boundHandleToolbarDragMove = null;
+    this.boundHandleToolbarDragEnd = null;
   };
 
   /**
@@ -1228,6 +1436,15 @@
     this.boundHandleTouchEnd = null;
     this.boundSystemThemeChange = null;
     this.systemThemeMediaQuery = null;
+    
+    // Clear drag-related bound function references
+    this.boundHandleToolbarDragStart = null;
+    this.boundHandleToolbarDragMove = null;
+    this.boundHandleToolbarDragEnd = null;
+    
+    // Reset drag state
+    this.isDraggingToolbar = false;
+    this.dragOffset = { x: 0, y: 0 };
     
     // Reset state
     this.isDrawing = false;
