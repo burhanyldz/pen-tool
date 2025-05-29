@@ -41,6 +41,17 @@
     this.isDarkMode = false;
     this.isEnabled = true; // Track whether the pen tool is enabled
 
+    // Bound function references for proper event listener cleanup
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
+
     // Initialize with default values or provided options
     this.targetElement = options.targetElement;
     this.lineWidth = options.lineWidth || 3;
@@ -83,15 +94,15 @@
       this.targetElement.style.position = 'relative';
     }
     
-    // Add touch-specific CSS to prevent interference
-    this.targetElement.style.touchAction = 'none';
+    // Add touch-specific CSS to prevent interference while allowing multi-touch gestures
+    this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
     this.targetElement.style.userSelect = 'none';
     this.targetElement.style.webkitUserSelect = 'none';
     
     // Add system theme change listener if themeSetting is 'system'
     var self = this;
     if (this.themeSetting === 'system' && window.matchMedia) {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      this.boundSystemThemeChange = function(e) {
         if (self.themeSetting === 'system') { // Only respond if still using system setting
           self.isDarkMode = e.matches;
           self.applyTheme();
@@ -105,7 +116,10 @@
             }
           }
         }
-      });
+      };
+      
+      this.systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      this.systemThemeMediaQuery.addEventListener('change', this.boundSystemThemeChange);
     }
 
     // Create SVG element that will contain all drawings
@@ -263,9 +277,9 @@
               // Add hand tool CSS class for visual feedback
               self.targetElement.classList.add('pen-tool-hand-mode');
             } else {
-              // For drawing tools, capture events
+              // For drawing tools, capture events but allow multi-touch gestures
               self.svg.style.pointerEvents = 'auto';
-              self.targetElement.style.touchAction = 'none';
+              self.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
               // Remove hand tool CSS class
               self.targetElement.classList.remove('pen-tool-hand-mode');
             }
@@ -335,26 +349,35 @@
   PenTool.prototype.addEventListeners = function() {
     var self = this;
     
+    // Create bound function references for proper cleanup
+    this.boundHandleDrawStart = function(e) { self.handleDrawStart(e); };
+    this.boundHandleDrawMove = function(e) { self.handleDrawMove(e); };
+    this.boundHandleMouseLeave = function(e) { self.handleMouseLeave(e); };
+    this.boundHandleDrawEnd = function(e) { self.handleDrawEnd(e); };
+    this.boundHandleTouchStart = function(e) { self.handleTouchStart(e); };
+    this.boundHandleTouchMove = function(e) { self.handleTouchMove(e); };
+    this.boundHandleTouchEnd = function(e) { self.handleTouchEnd(e); };
+    
     // Mouse events
-    this.svg.addEventListener('mousedown', function(e) { self.handleDrawStart(e); });
-    this.svg.addEventListener('mousemove', function(e) { self.handleDrawMove(e); });
-    this.svg.addEventListener('mouseleave', function(e) { self.handleMouseLeave(e); });
-    window.addEventListener('mouseup', function(e) { self.handleDrawEnd(e); });
+    this.svg.addEventListener('mousedown', this.boundHandleDrawStart);
+    this.svg.addEventListener('mousemove', this.boundHandleDrawMove);
+    this.svg.addEventListener('mouseleave', this.boundHandleMouseLeave);
+    window.addEventListener('mouseup', this.boundHandleDrawEnd);
     
     // Touch events for mobile support - try multiple approaches
-    this.svg.addEventListener('touchstart', function(e) { self.handleTouchStart(e); }, { passive: false });
-    this.svg.addEventListener('touchmove', function(e) { self.handleTouchMove(e); }, { passive: false });
+    this.svg.addEventListener('touchstart', this.boundHandleTouchStart, { passive: false });
+    this.svg.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
     // Add touch events to target element as fallback
-    this.targetElement.addEventListener('touchstart', function(e) { self.handleTouchStart(e); }, { passive: false });
-    this.targetElement.addEventListener('touchmove', function(e) { self.handleTouchMove(e); }, { passive: false });
+    this.targetElement.addEventListener('touchstart', this.boundHandleTouchStart, { passive: false });
+    this.targetElement.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
     // Also add touchmove to document and window as fallback
-    document.addEventListener('touchmove', function(e) { self.handleTouchMove(e); }, { passive: false });
-    window.addEventListener('touchmove', function(e) { self.handleTouchMove(e); }, { passive: false });
+    document.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
+    window.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
-    window.addEventListener('touchend', function(e) { self.handleTouchEnd(e); });
-    window.addEventListener('touchcancel', function(e) { self.handleTouchEnd(e); });
+    window.addEventListener('touchend', this.boundHandleTouchEnd);
+    window.addEventListener('touchcancel', this.boundHandleTouchEnd);
   };
 
   /**
@@ -452,22 +475,26 @@
     // Allow multi-touch for hand tool (pinch zoom)
     if (this.currentTool === 'hand') return;
     
+    // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
-    
-    event.preventDefault();
-    event.stopPropagation();
     
     var touch = event.touches[0];
     var rect = this.svg.getBoundingClientRect();
     var x = touch.clientX - rect.left;
     var y = touch.clientY - rect.top;
     
-    this.isDrawing = true;
-    
-    if (this.currentTool === 'pen') {
-      this.startDrawing(x, y);
-    } else if (this.currentTool === 'eraser') {
-      this.startErasing(x, y);
+    // Only prevent default if touch is within the SVG bounds
+    if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      this.isDrawing = true;
+      
+      if (this.currentTool === 'pen') {
+        this.startDrawing(x, y);
+      } else if (this.currentTool === 'eraser') {
+        this.startErasing(x, y);
+      }
     }
   };
 
@@ -478,27 +505,34 @@
     // Allow default touch behaviors for hand tool
     if (this.currentTool === 'hand') return;
     
+    // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
-    
-    event.preventDefault();
-    event.stopPropagation();
     
     var touch = event.touches[0];
     var rect = this.svg.getBoundingClientRect();
     var x = touch.clientX - rect.left;
     var y = touch.clientY - rect.top;
     
+    // Only prevent default if touch is within the SVG bounds and we're drawing
+    var isWithinBounds = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    
     // Show eraser indicator when eraser tool is active, even when not drawing
-    if (this.currentTool === 'eraser') {
+    if (this.currentTool === 'eraser' && isWithinBounds) {
       this.showEraserIndicator(x, y);
     }
     
     if (!this.isDrawing) return;
     
-    if (this.currentTool === 'pen') {
-      this.continueDrawing(x, y);
-    } else if (this.currentTool === 'eraser') {
-      this.continueErasing(x, y);
+    // Only prevent default for drawing operations within bounds
+    if (isWithinBounds) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      if (this.currentTool === 'pen') {
+        this.continueDrawing(x, y);
+      } else if (this.currentTool === 'eraser') {
+        this.continueErasing(x, y);
+      }
     }
   };
 
@@ -1013,10 +1047,46 @@
    * Used when disabling the pen tool
    */
   PenTool.prototype.removeEventListeners = function() {
-    // Note: In the traditional approach, removing event listeners is more complex
-    // since we need to maintain references to the bound functions
-    // For simplicity, this is left as a placeholder
-    // In real implementation, you'd need to store function references when adding listeners
+    // Remove SVG and window event listeners using bound references
+    if (this.svg && this.boundHandleDrawStart) {
+      this.svg.removeEventListener('mousedown', this.boundHandleDrawStart);
+      this.svg.removeEventListener('mousemove', this.boundHandleDrawMove);
+      this.svg.removeEventListener('mouseleave', this.boundHandleMouseLeave);
+      this.svg.removeEventListener('touchstart', this.boundHandleTouchStart);
+      this.svg.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    if (this.targetElement && this.boundHandleTouchStart) {
+      this.targetElement.removeEventListener('touchstart', this.boundHandleTouchStart);
+      this.targetElement.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    if (this.boundHandleDrawEnd) {
+      window.removeEventListener('mouseup', this.boundHandleDrawEnd);
+      window.removeEventListener('touchend', this.boundHandleTouchEnd);
+      window.removeEventListener('touchcancel', this.boundHandleTouchEnd);
+      window.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    if (this.boundHandleTouchMove) {
+      document.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    // Remove system theme change listener
+    if (this.systemThemeMediaQuery && this.boundSystemThemeChange) {
+      this.systemThemeMediaQuery.removeEventListener('change', this.boundSystemThemeChange);
+    }
+    
+    // Clear bound function references
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
   };
 
   /**
@@ -1093,9 +1163,9 @@
       // Add hand tool CSS class for visual feedback
       this.targetElement.classList.add('pen-tool-hand-mode');
     } else {
-      // For drawing tools, capture events
+      // For drawing tools, capture events but allow multi-touch gestures
       this.svg.style.pointerEvents = 'auto';
-      this.targetElement.style.touchAction = 'none';
+      this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
       // Remove hand tool CSS class
       this.targetElement.classList.remove('pen-tool-hand-mode');
     }
@@ -1111,8 +1181,8 @@
    * This completely removes the pen tool from the DOM and cleans up resources
    */
   PenTool.prototype.destroy = function() {
-    // Remove event listeners first (simplified for traditional approach)
-    // this.removeEventListeners();
+    // Remove event listeners first
+    this.removeEventListeners();
     
     // Remove SVG element from DOM
     if (this.svg && this.svg.parentNode) {
@@ -1147,6 +1217,17 @@
     this.currentPath = null;
     this.strokes = [];
     this.temporaryEraserStroke = null;
+    
+    // Clear bound function references
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
     
     // Reset state
     this.isDrawing = false;

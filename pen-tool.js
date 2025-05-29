@@ -78,8 +78,8 @@ export class PenTool {
       this.targetElement.style.position = 'relative';
     }
     
-    // Add touch-specific CSS to prevent interference
-    this.targetElement.style.touchAction = 'none';
+    // Add touch-specific CSS to prevent interference while allowing multi-touch gestures
+    this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
     this.targetElement.style.userSelect = 'none';
     this.targetElement.style.webkitUserSelect = 'none';
     
@@ -252,9 +252,9 @@ export class PenTool {
             // Add hand tool CSS class for visual feedback
             this.targetElement.classList.add('pen-tool-hand-mode');
           } else {
-            // For drawing tools, capture events
+            // For drawing tools, capture events but allow multi-touch gestures
             this.svg.style.pointerEvents = 'auto';
-            this.targetElement.style.touchAction = 'none';
+            this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
             // Remove hand tool CSS class
             this.targetElement.classList.remove('pen-tool-hand-mode');
           }
@@ -430,22 +430,26 @@ export class PenTool {
     // Allow multi-touch for hand tool (pinch zoom)
     if (this.currentTool === 'hand') return;
     
+    // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
-    
-    event.preventDefault();
-    event.stopPropagation();
     
     const touch = event.touches[0];
     const rect = this.svg.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     
-    this.isDrawing = true;
-    
-    if (this.currentTool === 'pen') {
-      this.startDrawing(x, y);
-    } else if (this.currentTool === 'eraser') {
-      this.startErasing(x, y);
+    // Only prevent default if touch is within the SVG bounds
+    if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      this.isDrawing = true;
+      
+      if (this.currentTool === 'pen') {
+        this.startDrawing(x, y);
+      } else if (this.currentTool === 'eraser') {
+        this.startErasing(x, y);
+      }
     }
   }
 
@@ -456,27 +460,34 @@ export class PenTool {
     // Allow default touch behaviors for hand tool
     if (this.currentTool === 'hand') return;
     
+    // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
-    
-    event.preventDefault();
-    event.stopPropagation();
     
     const touch = event.touches[0];
     const rect = this.svg.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
     
+    // Only prevent default if touch is within the SVG bounds and we're drawing
+    const isWithinBounds = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    
     // Show eraser indicator when eraser tool is active, even when not drawing
-    if (this.currentTool === 'eraser') {
+    if (this.currentTool === 'eraser' && isWithinBounds) {
       this.showEraserIndicator(x, y);
     }
     
     if (!this.isDrawing) return;
     
-    if (this.currentTool === 'pen') {
-      this.continueDrawing(x, y);
-    } else if (this.currentTool === 'eraser') {
-      this.continueErasing(x, y);
+    // Only prevent default for drawing operations within bounds
+    if (isWithinBounds) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      if (this.currentTool === 'pen') {
+        this.continueDrawing(x, y);
+      } else if (this.currentTool === 'eraser') {
+        this.continueErasing(x, y);
+      }
     }
   }
 
@@ -1074,9 +1085,9 @@ export class PenTool {
       // Add hand tool CSS class for visual feedback
       this.targetElement.classList.add('pen-tool-hand-mode');
     } else {
-      // For drawing tools, capture events
+      // For drawing tools, capture events but allow multi-touch gestures
       this.svg.style.pointerEvents = 'auto';
-      this.targetElement.style.touchAction = 'none';
+      this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
       // Remove hand tool CSS class
       this.targetElement.classList.remove('pen-tool-hand-mode');
     }
