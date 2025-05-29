@@ -1,5 +1,6 @@
 /**
  * PenTool - A vanilla JavaScript implementation of an SVG pen tool
+ * Traditional (non-module) version for maximum compatibility
  * 
  * Features:
  * - SVG-based drawing for resolution independence
@@ -11,31 +12,46 @@
  * - Developer customization options
  */
 
-export class PenTool {
-  targetElement;
-  svg;
-  drawingContainer;
-  isDrawing = false;
-  currentPath = null;
-  currentPathData = '';
-  toolbar;
-  eraserIndicator = null;
-  strokes = [];
-  temporaryEraserStroke = null;
-  
-  // Configuration options
-  lineWidth;
-  lineColor;
-  toolPosition;
-  zIndex;
-  currentTool = 'pen';
-  eraserWidth;
-  themeToggle;
-  themeSetting;
-  isDarkMode = false;
-  isEnabled = true; // Track whether the pen tool is enabled
+// Define PenTool as a global class (old school approach)
+(function(window) {
+  'use strict';
 
-  constructor(options) {
+  function PenTool(options) {
+    // Instance properties
+    this.targetElement = null;
+    this.svg = null;
+    this.drawingContainer = null;
+    this.isDrawing = false;
+    this.currentPath = null;
+    this.currentPathData = '';
+    this.toolbar = null;
+    this.eraserIndicator = null;
+    this.strokes = [];
+    this.temporaryEraserStroke = null;
+    
+    // Configuration options
+    this.lineWidth = null;
+    this.lineColor = null;
+    this.toolPosition = null;
+    this.zIndex = null;
+    this.currentTool = 'pen';
+    this.eraserWidth = null;
+    this.themeToggle = null;
+    this.themeSetting = null;
+    this.isDarkMode = false;
+    this.isEnabled = true; // Track whether the pen tool is enabled
+
+    // Bound function references for proper event listener cleanup
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
+
     // Initialize with default values or provided options
     this.targetElement = options.targetElement;
     this.lineWidth = options.lineWidth || 3;
@@ -63,7 +79,7 @@ export class PenTool {
    * Initialize the pen tool with SVG canvas and toolbar
    * This method must be called manually after creating the PenTool instance
    */
-  init() {
+  PenTool.prototype.init = function() {
     if (this.svg || this.toolbar) {
       console.warn('PenTool is already initialized. Call destroy() first if you want to reinitialize.');
       return;
@@ -73,7 +89,7 @@ export class PenTool {
     this.injectCSS();
     
     // Set position relative on target if not already
-    const computedStyle = window.getComputedStyle(this.targetElement);
+    var computedStyle = window.getComputedStyle(this.targetElement);
     if (computedStyle.position === 'static') {
       this.targetElement.style.position = 'relative';
     }
@@ -84,22 +100,26 @@ export class PenTool {
     this.targetElement.style.webkitUserSelect = 'none';
     
     // Add system theme change listener if themeSetting is 'system'
+    var self = this;
     if (this.themeSetting === 'system' && window.matchMedia) {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (this.themeSetting === 'system') { // Only respond if still using system setting
-          this.isDarkMode = e.matches;
-          this.applyTheme();
+      this.boundSystemThemeChange = function(e) {
+        if (self.themeSetting === 'system') { // Only respond if still using system setting
+          self.isDarkMode = e.matches;
+          self.applyTheme();
           
           // Update theme toggle button icon if it exists
-          if (this.themeToggle) {
-            const themeButton = this.toolbar.querySelector('[data-tool="theme"]');
+          if (self.themeToggle) {
+            var themeButton = self.toolbar.querySelector('[data-tool="theme"]');
             if (themeButton) {
-              themeButton.innerHTML = this.getThemeToggleIcon();
-              themeButton.title = this.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
+              themeButton.innerHTML = self.getThemeToggleIcon();
+              themeButton.title = self.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
             }
           }
         }
-      });
+      };
+      
+      this.systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      this.systemThemeMediaQuery.addEventListener('change', this.boundSystemThemeChange);
     }
 
     // Create SVG element that will contain all drawings
@@ -143,12 +163,12 @@ export class PenTool {
     
     // Apply the theme based on the isDarkMode setting
     this.applyTheme();
-  }
+  };
 
   /**
    * Set toolbar position based on the toolPosition option
    */
-  setToolbarPosition() {
+  PenTool.prototype.setToolbarPosition = function() {
     // Reset all positioning styles first
     this.toolbar.style.top = '';
     this.toolbar.style.right = '';
@@ -191,13 +211,14 @@ export class PenTool {
         this.toolbar.style.flexDirection = 'column';
         break;
     }
-  }
+  };
 
   /**
    * Create toolbar with pen, eraser, and clear all buttons
    */
-  createToolbar() {
-    const tools = [
+  PenTool.prototype.createToolbar = function() {
+    var self = this;
+    var tools = [
       { name: 'pen', icon: this.getPenIcon(), title: 'Kalem Aracı' },
       { name: 'eraser', icon: this.getEraserIcon(), title: 'Silgi Aracı' },
       { name: 'hand', icon: this.getHandIcon(), title: 'El Aracı - Dokunmatik Hareketler İçin (Pinch/Pan)' },
@@ -213,8 +234,9 @@ export class PenTool {
       });
     }
     
-    tools.forEach(tool => {
-      const button = document.createElement('button');
+    for (var i = 0; i < tools.length; i++) {
+      var tool = tools[i];
+      var button = document.createElement('button');
       button.innerHTML = tool.icon;
       button.title = tool.title;
       button.className = 'pen-tool-button';
@@ -232,123 +254,144 @@ export class PenTool {
       
       // Add active state for pen, eraser, and hand tools
       if (tool.name === 'pen' || tool.name === 'eraser' || tool.name === 'hand') {
-        const handleToolSelect = () => {
-          // Remove active class from all buttons
-          const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-          buttons.forEach(btn => btn.classList.remove('active'));
+        (function(toolName, buttonEl) {
+          var handleToolSelect = function() {
+            // Remove active class from all buttons
+            var buttons = self.toolbar.querySelectorAll('.pen-tool-button');
+            for (var j = 0; j < buttons.length; j++) {
+              buttons[j].classList.remove('active');
+            }
+            
+            // Add active class to clicked button
+            buttonEl.classList.add('active');
+            
+            // Set current tool
+            self.currentTool = toolName;
+            
+            // Configure SVG pointer events based on tool
+            if (toolName === 'hand') {
+              // For hand tool, allow normal touch events to pass through for pan/zoom
+              self.svg.style.pointerEvents = 'none';
+              // Enable default touch behaviors for the target element
+              self.targetElement.style.touchAction = 'auto';
+              // Add hand tool CSS class for visual feedback
+              self.targetElement.classList.add('pen-tool-hand-mode');
+            } else {
+              // For drawing tools, capture events but allow multi-touch gestures
+              self.svg.style.pointerEvents = 'auto';
+              self.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
+              // Remove hand tool CSS class
+              self.targetElement.classList.remove('pen-tool-hand-mode');
+            }
+            
+            // Hide eraser indicator when switching tools
+            if (toolName !== 'eraser') {
+              self.hideEraserIndicator();
+            }
+          };
           
-          // Add active class to clicked button
-          button.classList.add('active');
+          buttonEl.addEventListener('click', handleToolSelect);
+          buttonEl.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            handleToolSelect();
+          });
           
-          // Set current tool
-          this.currentTool = tool.name;
-          
-          // Configure SVG pointer events based on tool
-          if (tool.name === 'hand') {
-            // For hand tool, allow normal touch events to pass through for pan/zoom
-            this.svg.style.pointerEvents = 'none';
-            // Enable default touch behaviors for the target element
-            this.targetElement.style.touchAction = 'auto';
-            // Add hand tool CSS class for visual feedback
-            this.targetElement.classList.add('pen-tool-hand-mode');
-          } else {
-            // For drawing tools, capture events but allow multi-touch gestures
-            this.svg.style.pointerEvents = 'auto';
-            this.targetElement.style.touchAction = 'pan-x pan-y pinch-zoom';
-            // Remove hand tool CSS class
-            this.targetElement.classList.remove('pen-tool-hand-mode');
+          // Set pen as active by default
+          if (toolName === 'pen') {
+            buttonEl.classList.add('active');
           }
-          
-          // Hide eraser indicator when switching tools
-          if (tool.name !== 'eraser') {
-            this.hideEraserIndicator();
-          }
-        };
-        
-        button.addEventListener('click', handleToolSelect);
-        button.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          handleToolSelect();
-        });
-        
-        // Set pen as active by default
-        if (tool.name === 'pen') {
-          button.classList.add('active');
-        }
+        })(tool.name, button);
       } else if (tool.name === 'clear') {
         // Add clear functionality
-        const handleClear = () => this.clearAll();
-        button.addEventListener('click', handleClear);
-        button.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          handleClear();
-        });
+        (function(buttonEl) {
+          var handleClear = function() {
+            self.clearAll();
+          };
+          buttonEl.addEventListener('click', handleClear);
+          buttonEl.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            handleClear();
+          });
+        })(button);
       } else if (tool.name === 'theme') {
         // Add theme toggle functionality
-        const handleThemeToggle = () => {
-          // Toggle dark mode
-          this.isDarkMode = !this.isDarkMode;
+        (function(buttonEl) {
+          var handleThemeToggle = function() {
+            // Toggle dark mode
+            self.isDarkMode = !self.isDarkMode;
+            
+            // When user manually toggles theme, we're no longer following system preference
+            self.themeSetting = self.isDarkMode ? 'dark' : 'light';
+            
+            // Update button
+            buttonEl.innerHTML = self.getThemeToggleIcon();
+            buttonEl.title = self.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
+            
+            // Apply the theme using our consistent theme method
+            self.applyTheme();
+          };
           
-          // When user manually toggles theme, we're no longer following system preference
-          this.themeSetting = this.isDarkMode ? 'dark' : 'light';
-          
-          // Update button
-          button.innerHTML = this.getThemeToggleIcon();
-          button.title = this.isDarkMode ? 'Açık Tema' : 'Koyu Tema';
-          
-          // Apply the theme using our consistent theme method
-          this.applyTheme();
-        };
-        
-        button.addEventListener('click', handleThemeToggle);
-        button.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          handleThemeToggle();
-        });
+          buttonEl.addEventListener('click', handleThemeToggle);
+          buttonEl.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            handleThemeToggle();
+          });
+        })(button);
       }
       
       this.toolbar.appendChild(button);
-    });
-  }
+    }
+  };
 
   /**
    * Add event listeners for mouse and touch events
    */
-  addEventListeners() {
+  PenTool.prototype.addEventListeners = function() {
+    var self = this;
+    
+    // Create bound function references for proper cleanup
+    this.boundHandleDrawStart = function(e) { self.handleDrawStart(e); };
+    this.boundHandleDrawMove = function(e) { self.handleDrawMove(e); };
+    this.boundHandleMouseLeave = function(e) { self.handleMouseLeave(e); };
+    this.boundHandleDrawEnd = function(e) { self.handleDrawEnd(e); };
+    this.boundHandleTouchStart = function(e) { self.handleTouchStart(e); };
+    this.boundHandleTouchMove = function(e) { self.handleTouchMove(e); };
+    this.boundHandleTouchEnd = function(e) { self.handleTouchEnd(e); };
+    
     // Mouse events
-    this.svg.addEventListener('mousedown', this.handleDrawStart.bind(this));
-    this.svg.addEventListener('mousemove', this.handleDrawMove.bind(this));
-    this.svg.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
-    window.addEventListener('mouseup', this.handleDrawEnd.bind(this));
+    this.svg.addEventListener('mousedown', this.boundHandleDrawStart);
+    this.svg.addEventListener('mousemove', this.boundHandleDrawMove);
+    this.svg.addEventListener('mouseleave', this.boundHandleMouseLeave);
+    window.addEventListener('mouseup', this.boundHandleDrawEnd);
     
     // Touch events for mobile support - try multiple approaches
-    this.svg.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    this.svg.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    this.svg.addEventListener('touchstart', this.boundHandleTouchStart, { passive: false });
+    this.svg.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
     // Add touch events to target element as fallback
-    this.targetElement.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-    this.targetElement.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    this.targetElement.addEventListener('touchstart', this.boundHandleTouchStart, { passive: false });
+    this.targetElement.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
     // Also add touchmove to document and window as fallback
-    document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-    window.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    document.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
+    window.addEventListener('touchmove', this.boundHandleTouchMove, { passive: false });
     
-    window.addEventListener('touchend', this.handleTouchEnd.bind(this));
-    window.addEventListener('touchcancel', this.handleTouchEnd.bind(this));
-  }
+    window.addEventListener('touchend', this.boundHandleTouchEnd);
+    window.addEventListener('touchcancel', this.boundHandleTouchEnd);
+  };
 
   /**
    * Handle start of drawing (mousedown)
    */
-  handleDrawStart(event) {
+  PenTool.prototype.handleDrawStart = function(event) {
     // Don't draw if hand tool is active
     if (this.currentTool === 'hand') return;
     
     event.preventDefault();
     
-    const rect = this.svg.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    var rect = this.svg.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
     
     this.isDrawing = true;
     
@@ -357,18 +400,18 @@ export class PenTool {
     } else if (this.currentTool === 'eraser') {
       this.startErasing(x, y);
     }
-  }
+  };
 
   /**
    * Handle movement during drawing (mousemove)
    */
-  handleDrawMove(event) {
+  PenTool.prototype.handleDrawMove = function(event) {
     // Don't handle drawing for hand tool
     if (this.currentTool === 'hand') return;
     
-    const rect = this.svg.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    var rect = this.svg.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
     
     // Show eraser indicator when eraser tool is active, even when not drawing
     if (this.currentTool === 'eraser') {
@@ -382,36 +425,38 @@ export class PenTool {
     } else if (this.currentTool === 'eraser') {
       this.continueErasing(x, y);
     }
-  }
+  };
 
   /**
    * Handle mouse leaving the SVG area
    */
-  handleMouseLeave() {
+  PenTool.prototype.handleMouseLeave = function() {
     if (this.currentTool === 'eraser' && !this.isDrawing) {
       this.hideEraserIndicator();
     }
-  }
+  };
 
   /**
    * Handle end of drawing (mouseup)
    */
-  handleDrawEnd() {
+  PenTool.prototype.handleDrawEnd = function() {
     if (!this.isDrawing) return;
     
     if (this.currentPath) {
       // Remove any temporary stroke first
       if (this.temporaryEraserStroke) {
-        this.strokes = this.strokes.filter(stroke => !stroke.isTemporary);
+        this.strokes = this.strokes.filter(function(stroke) {
+          return !stroke.isTemporary;
+        });
         this.temporaryEraserStroke = null;
       }
       
       // Add the completed stroke to our strokes array with the current timestamp
-      const timestamp = Date.now();
+      var timestamp = Date.now();
       this.strokes.push({
         type: this.currentTool,
         element: this.currentPath,
-        timestamp
+        timestamp: timestamp
       });
       
       // Apply the time-based masking
@@ -421,22 +466,22 @@ export class PenTool {
     this.isDrawing = false;
     this.currentPath = null;
     this.hideEraserIndicator();
-  }
+  };
 
   /**
    * Handle touch start event
    */
-  handleTouchStart(event) {
+  PenTool.prototype.handleTouchStart = function(event) {
     // Allow multi-touch for hand tool (pinch zoom)
     if (this.currentTool === 'hand') return;
     
     // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
     
-    const touch = event.touches[0];
-    const rect = this.svg.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    var touch = event.touches[0];
+    var rect = this.svg.getBoundingClientRect();
+    var x = touch.clientX - rect.left;
+    var y = touch.clientY - rect.top;
     
     // Only prevent default if touch is within the SVG bounds
     if (x >= 0 && y >= 0 && x <= rect.width && y <= rect.height) {
@@ -451,25 +496,25 @@ export class PenTool {
         this.startErasing(x, y);
       }
     }
-  }
+  };
 
   /**
    * Handle touch move event
    */
-  handleTouchMove(event) {
+  PenTool.prototype.handleTouchMove = function(event) {
     // Allow default touch behaviors for hand tool
     if (this.currentTool === 'hand') return;
     
     // Allow multi-touch gestures (pinch zoom, pan) even with pen/eraser tools
     if (event.touches.length !== 1) return;
     
-    const touch = event.touches[0];
-    const rect = this.svg.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    var touch = event.touches[0];
+    var rect = this.svg.getBoundingClientRect();
+    var x = touch.clientX - rect.left;
+    var y = touch.clientY - rect.top;
     
     // Only prevent default if touch is within the SVG bounds and we're drawing
-    const isWithinBounds = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
+    var isWithinBounds = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height;
     
     // Show eraser indicator when eraser tool is active, even when not drawing
     if (this.currentTool === 'eraser' && isWithinBounds) {
@@ -489,22 +534,22 @@ export class PenTool {
         this.continueErasing(x, y);
       }
     }
-  }
+  };
 
   /**
    * Handle touch end event
    */
-  handleTouchEnd() {
+  PenTool.prototype.handleTouchEnd = function() {
     // Don't handle draw end for hand tool
     if (this.currentTool === 'hand') return;
     
     this.handleDrawEnd();
-  }
+  };
 
   /**
    * Start drawing at the specified coordinates
    */
-  startDrawing(x, y) {
+  PenTool.prototype.startDrawing = function(x, y) {
     this.currentPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     this.currentPath.setAttribute('stroke', this.lineColor);
     this.currentPath.setAttribute('stroke-width', this.lineWidth.toString());
@@ -514,27 +559,27 @@ export class PenTool {
     this.currentPath.style.pointerEvents = 'none'; // Prevent paths from blocking touch events
     this.currentPath.setAttribute('pointer-events', 'none');
     
-    this.currentPathData = `M ${x} ${y}`;
+    this.currentPathData = 'M ' + x + ' ' + y;
     this.currentPath.setAttribute('d', this.currentPathData);
     
     // Add to our drawing container
     this.drawingContainer.appendChild(this.currentPath);
-  }
+  };
 
   /**
    * Continue drawing to the specified coordinates
    */
-  continueDrawing(x, y) {
+  PenTool.prototype.continueDrawing = function(x, y) {
     if (!this.currentPath) return;
     
-    this.currentPathData += ` L ${x} ${y}`;
+    this.currentPathData += ' L ' + x + ' ' + y;
     this.currentPath.setAttribute('d', this.currentPathData);
-  }
+  };
 
   /**
    * Start erasing at the specified coordinates
    */
-  startErasing(x, y) {
+  PenTool.prototype.startErasing = function(x, y) {
     this.showEraserIndicator(x, y);
     
     // Create a new eraser path (invisible, just for tracking)
@@ -547,7 +592,7 @@ export class PenTool {
     this.currentPath.style.pointerEvents = 'none'; // Prevent eraser paths from blocking touch events
     this.currentPath.setAttribute('pointer-events', 'none');
     
-    this.currentPathData = `M ${x} ${y}`;
+    this.currentPathData = 'M ' + x + ' ' + y;
     this.currentPath.setAttribute('d', this.currentPathData);
     
     // Create a temporary eraser stroke for live erasing
@@ -563,19 +608,19 @@ export class PenTool {
     
     // Render the strokes to show immediate erasing effect
     this.renderStrokes();
-  }
+  };
 
   /**
    * Continue erasing to the specified coordinates
    */
-  continueErasing(x, y) {
+  PenTool.prototype.continueErasing = function(x, y) {
     if (!this.currentPath) {
       return;
     }
     
     this.showEraserIndicator(x, y);
     
-    this.currentPathData += ` L ${x} ${y}`;
+    this.currentPathData += ' L ' + x + ' ' + y;
     this.currentPath.setAttribute('d', this.currentPathData);
     
     // Update the temporary eraser stroke in real-time
@@ -583,19 +628,21 @@ export class PenTool {
       this.temporaryEraserStroke.element.setAttribute('d', this.currentPathData);
       this.renderStrokes();
     }
-  }
+  };
 
   /**
    * Render all strokes with proper masking
    */
-  renderStrokes() {
+  PenTool.prototype.renderStrokes = function() {
+    var self = this;
+    
     // Clear the container
     while (this.drawingContainer.firstChild) {
       this.drawingContainer.removeChild(this.drawingContainer.firstChild);
     }
     
     // Clear any previous defs
-    let defs = this.svg.querySelector('defs');
+    var defs = this.svg.querySelector('defs');
     if (!defs) {
       defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       this.svg.appendChild(defs);
@@ -606,42 +653,47 @@ export class PenTool {
     }
     
     // Sort strokes by timestamp (oldest first)
-    this.strokes.sort((a, b) => a.timestamp - b.timestamp);
+    this.strokes.sort(function(a, b) {
+      return a.timestamp - b.timestamp;
+    });
     
     // First, separate pen strokes and eraser strokes
-    const penStrokes = [];
-    const eraserStrokes = [];
+    var penStrokes = [];
+    var eraserStrokes = [];
     
-    this.strokes.forEach(stroke => {
+    for (var i = 0; i < this.strokes.length; i++) {
+      var stroke = this.strokes[i];
       if (stroke.type === 'pen') {
         penStrokes.push(stroke);
       } else {
         eraserStrokes.push(stroke);
       }
-    });
+    }
     
     // For each pen stroke, create a mask that includes all eraser strokes
     // that came AFTER this pen stroke (newer erasers affect older pen strokes)
-    penStrokes.forEach((penStroke, penIndex) => {
+    for (var penIndex = 0; penIndex < penStrokes.length; penIndex++) {
+      var penStroke = penStrokes[penIndex];
+      
       // Clone the pen stroke
-      const penElement = penStroke.element.cloneNode(true);
+      var penElement = penStroke.element.cloneNode(true);
       // Ensure cloned elements don't block touch events
       penElement.style.pointerEvents = 'none';
       penElement.setAttribute('pointer-events', 'none');
       
       // Get all eraser strokes that came after this pen stroke
-      const applicableErasers = eraserStrokes.filter(
-        eraser => eraser.timestamp > penStroke.timestamp
-      );
+      var applicableErasers = eraserStrokes.filter(function(eraser) {
+        return eraser.timestamp > penStroke.timestamp;
+      });
       
       if (applicableErasers.length > 0) {
         // This pen stroke needs masking
-        const maskId = `pen-mask-${penIndex}`;
-        const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+        var maskId = 'pen-mask-' + penIndex;
+        var mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
         mask.id = maskId;
         
         // Add white background to mask (fully visible)
-        const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        var background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         background.setAttribute('x', '0');
         background.setAttribute('y', '0');
         background.setAttribute('width', '100%');
@@ -650,21 +702,22 @@ export class PenTool {
         mask.appendChild(background);
         
         // Add each applicable eraser to the mask as black (transparent) areas
-        applicableErasers.forEach(eraser => {
-          const eraserPath = eraser.element.cloneNode(true);
+        for (var j = 0; j < applicableErasers.length; j++) {
+          var eraser = applicableErasers[j];
+          var eraserPath = eraser.element.cloneNode(true);
           eraserPath.setAttribute('stroke', 'black'); // In masks, black means transparent
-          eraserPath.setAttribute('stroke-width', this.eraserWidth.toString());
+          eraserPath.setAttribute('stroke-width', self.eraserWidth.toString());
           eraserPath.style.pointerEvents = 'none';
           eraserPath.setAttribute('pointer-events', 'none');
           mask.appendChild(eraserPath);
-        });
+        }
         
         // Add mask to defs
         defs.appendChild(mask);
         
         // Create a group with the mask and add the pen stroke to it
-        const maskedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        maskedGroup.setAttribute('mask', `url(#${maskId})`);
+        var maskedGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        maskedGroup.setAttribute('mask', 'url(#' + maskId + ')');
         maskedGroup.style.pointerEvents = 'none';
         maskedGroup.appendChild(penElement);
         
@@ -674,24 +727,24 @@ export class PenTool {
         // No applicable erasers, just add the pen stroke directly
         this.drawingContainer.appendChild(penElement);
       }
-    });
-  }
+    }
+  };
 
   /**
    * Hide eraser indicator
    */
-  hideEraserIndicator() {
+  PenTool.prototype.hideEraserIndicator = function() {
     if (this.eraserIndicator && this.eraserIndicator.parentNode) {
       this.eraserIndicator.parentNode.removeChild(this.eraserIndicator);
       this.eraserIndicator = null;
     }
-  }
+  };
 
   /**
    * Show a visual indicator for the eraser cursor
    */
-  showEraserIndicator(x, y) {
-    const eraserRadius = this.eraserWidth / 2;
+  PenTool.prototype.showEraserIndicator = function(x, y) {
+    var eraserRadius = this.eraserWidth / 2;
     
     if (!this.eraserIndicator) {
       this.eraserIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -706,12 +759,12 @@ export class PenTool {
     this.eraserIndicator.setAttribute('cx', x.toString());
     this.eraserIndicator.setAttribute('cy', y.toString());
     this.eraserIndicator.setAttribute('r', eraserRadius.toString());
-  }
+  };
 
   /**
    * Clear all drawings
    */
-  clearAll() {
+  PenTool.prototype.clearAll = function() {
     // Clear drawing container
     while (this.drawingContainer.firstChild) {
       this.drawingContainer.removeChild(this.drawingContainer.firstChild);
@@ -721,7 +774,7 @@ export class PenTool {
     this.strokes = [];
     
     // Clear any defs/masks
-    const defs = this.svg.querySelector('defs');
+    var defs = this.svg.querySelector('defs');
     if (defs) {
       while (defs.firstChild) {
         defs.removeChild(defs.firstChild);
@@ -729,12 +782,12 @@ export class PenTool {
     }
     
     this.hideEraserIndicator();
-  }
+  };
 
   /**
    * Update pen tool options
    */
-  updateOptions(options) {
+  PenTool.prototype.updateOptions = function(options) {
     if (options.lineWidth !== undefined) {
       this.lineWidth = options.lineWidth;
     }
@@ -757,18 +810,18 @@ export class PenTool {
     if (options.eraserWidth !== undefined) {
       this.eraserWidth = options.eraserWidth;
     }
-  }
+  };
 
   /**
    * Inject required CSS styles into the document head
    */
-  injectCSS() {
+  PenTool.prototype.injectCSS = function() {
     // Check if styles have already been injected to avoid duplicates
     if (document.getElementById('pen-tool-styles')) {
       return;
     }
 
-    const style = document.createElement('style');
+    var style = document.createElement('style');
     style.id = 'pen-tool-styles';
     style.textContent = `
       /* Essential Pen Tool Styles Only */
@@ -813,12 +866,12 @@ export class PenTool {
     `;
     
     document.head.appendChild(style);
-  }
+  };
 
   /**
    * Get SVG icon for pen tool
    */
-  getPenIcon() {
+  PenTool.prototype.getPenIcon = function() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
@@ -827,24 +880,24 @@ export class PenTool {
         <circle cx="11" cy="11" r="2"></circle>
       </svg>
     `;
-  }
+  };
 
   /**
    * Get SVG icon for eraser tool
    */
-  getEraserIcon() {
+  PenTool.prototype.getEraserIcon = function() {
     return `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.5 20H21v2h-7l3.5-2z" fill="none" stroke="currentColor"/>
         <path d="M4.5 22l-2.1-2.1a3.5 3.5 0 0 1 .1-4.9l11.1-11.5a3.5 3.5 0 0 1 5 0l3.1 3.1a3.5 3.5 0 0 1 0 5L11.5 22h-7z" fill="none" stroke="currentColor"/>
       </svg>
     `;
-  }
+  };
 
   /**
    * Get SVG icon for hand tool
    */
-  getHandIcon() {
+  PenTool.prototype.getHandIcon = function() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 11V6a2 2 0 0 0-4 0v5"/>
@@ -853,24 +906,24 @@ export class PenTool {
         <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L8 15"/>
       </svg>
     `;
-  }
+  };
 
   /**
    * Get SVG icon for clear tool
    */
-  getClearIcon() {
+  PenTool.prototype.getClearIcon = function() {
     return `
       <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
         <line x1="8" y1="12" x2="16" y2="12"></line>
       </svg>
     `;
-  }
+  };
 
   /**
    * Get SVG icon for theme toggle
    */
-  getThemeToggleIcon() {
+  PenTool.prototype.getThemeToggleIcon = function() {
     // Different icon based on current theme
     if (this.isDarkMode) {
       // Sun icon for light mode
@@ -895,12 +948,12 @@ export class PenTool {
         </svg>
       `;
     }
-  }
+  };
 
   /**
    * Apply the current theme based on isDarkMode state
    */
-  applyTheme() {
+  PenTool.prototype.applyTheme = function() {
     if (this.isDarkMode) {
       // Apply dark mode
       this.targetElement.classList.add('pen-tool-dark-mode');
@@ -909,10 +962,10 @@ export class PenTool {
       // Update toolbar styles
       if (this.toolbar) {
         this.toolbar.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';
-        const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-        buttons.forEach(btn => {
-          btn.style.color = 'white';
-        });
+        var buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].style.color = 'white';
+        }
       }
     } else {
       // Apply light mode
@@ -922,19 +975,19 @@ export class PenTool {
       // Update toolbar styles
       if (this.toolbar) {
         this.toolbar.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-        const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-        buttons.forEach(btn => {
-          btn.style.color = '';
-        });
+        var buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].style.color = '';
+        }
       }
     }
-  }
+  };
 
   /**
    * Enable the pen tool and toolbar
    * This makes the pen tool handle and toolbar visible and functional
    */
-  enable() {
+  PenTool.prototype.enable = function() {
     if (!this.svg || !this.toolbar) {
       console.warn('PenTool is not initialized. Call init() first before enabling.');
       return;
@@ -955,13 +1008,13 @@ export class PenTool {
     
     // Re-add event listeners if they were removed
     this.addEventListeners();
-  }
+  };
 
   /**
    * Disable the pen tool and toolbar
    * This hides the pen tool handle and toolbar making them non-functional
    */
-  disable() {
+  PenTool.prototype.disable = function() {
     if (!this.svg || !this.toolbar) {
       console.warn('PenTool is not initialized.');
       return;
@@ -987,79 +1040,102 @@ export class PenTool {
     
     // Remove event listeners to prevent any drawing
     this.removeEventListeners();
-  }
+  };
 
   /**
    * Remove event listeners for mouse and touch events
    * Used when disabling the pen tool
    */
-  removeEventListeners() {
-    if (!this.svg || !this.targetElement) return;
+  PenTool.prototype.removeEventListeners = function() {
+    // Remove SVG and window event listeners using bound references
+    if (this.svg && this.boundHandleDrawStart) {
+      this.svg.removeEventListener('mousedown', this.boundHandleDrawStart);
+      this.svg.removeEventListener('mousemove', this.boundHandleDrawMove);
+      this.svg.removeEventListener('mouseleave', this.boundHandleMouseLeave);
+      this.svg.removeEventListener('touchstart', this.boundHandleTouchStart);
+      this.svg.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
     
-    // Mouse events
-    this.svg.removeEventListener('mousedown', this.handleDrawStart.bind(this));
-    this.svg.removeEventListener('mousemove', this.handleDrawMove.bind(this));
-    this.svg.removeEventListener('mouseleave', this.handleMouseLeave.bind(this));
-    window.removeEventListener('mouseup', this.handleDrawEnd.bind(this));
+    if (this.targetElement && this.boundHandleTouchStart) {
+      this.targetElement.removeEventListener('touchstart', this.boundHandleTouchStart);
+      this.targetElement.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
     
-    // Touch events
-    this.svg.removeEventListener('touchstart', this.handleTouchStart.bind(this));
-    this.svg.removeEventListener('touchmove', this.handleTouchMove.bind(this));
-    this.targetElement.removeEventListener('touchstart', this.handleTouchStart.bind(this));
-    this.targetElement.removeEventListener('touchmove', this.handleTouchMove.bind(this));
-    document.removeEventListener('touchmove', this.handleTouchMove.bind(this));
-    window.removeEventListener('touchmove', this.handleTouchMove.bind(this));
-    window.removeEventListener('touchend', this.handleTouchEnd.bind(this));
-    window.removeEventListener('touchcancel', this.handleTouchEnd.bind(this));
-  }
+    if (this.boundHandleDrawEnd) {
+      window.removeEventListener('mouseup', this.boundHandleDrawEnd);
+      window.removeEventListener('touchend', this.boundHandleTouchEnd);
+      window.removeEventListener('touchcancel', this.boundHandleTouchEnd);
+      window.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    if (this.boundHandleTouchMove) {
+      document.removeEventListener('touchmove', this.boundHandleTouchMove);
+    }
+    
+    // Remove system theme change listener
+    if (this.systemThemeMediaQuery && this.boundSystemThemeChange) {
+      this.systemThemeMediaQuery.removeEventListener('change', this.boundSystemThemeChange);
+    }
+    
+    // Clear bound function references
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
+  };
 
   /**
    * Toggle the pen tool and toolbar visibility
    * @returns {boolean} The new state (true for enabled, false for disabled)
    */
-  toggle() {
+  PenTool.prototype.toggle = function() {
     if (this.isEnabled) {
       this.disable();
     } else {
       this.enable();
     }
     return this.isEnabled;
-  }
+  };
 
   /**
    * Programmatically switch to pen tool
    */
-  switchToPenTool() {
+  PenTool.prototype.switchToPenTool = function() {
     this.setActiveTool('pen');
-  }
+  };
 
   /**
    * Programmatically switch to eraser tool
    */
-  switchToEraserTool() {
+  PenTool.prototype.switchToEraserTool = function() {
     this.setActiveTool('eraser');
-  }
+  };
 
   /**
    * Programmatically switch to hand tool
    */
-  switchToHandTool() {
+  PenTool.prototype.switchToHandTool = function() {
     this.setActiveTool('hand');
-  }
+  };
 
   /**
    * Helper method to set the active tool and update UI
    * @param {string} toolName - The name of the tool ('pen', 'eraser', 'hand')
    */
-  setActiveTool(toolName) {
+  PenTool.prototype.setActiveTool = function(toolName) {
     if (!this.isEnabled) {
       console.warn('PenTool is disabled. Enable it first before switching tools.');
       return;
     }
 
-    const validTools = ['pen', 'eraser', 'hand'];
-    if (!validTools.includes(toolName)) {
-      console.error(`Invalid tool name: ${toolName}. Valid tools are: ${validTools.join(', ')}`);
+    var validTools = ['pen', 'eraser', 'hand'];
+    if (validTools.indexOf(toolName) === -1) {
+      console.error('Invalid tool name: ' + toolName + '. Valid tools are: ' + validTools.join(', '));
       return;
     }
 
@@ -1067,11 +1143,13 @@ export class PenTool {
     this.currentTool = toolName;
 
     // Remove active class from all tool buttons
-    const buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-    buttons.forEach(btn => btn.classList.remove('active'));
+    var buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.remove('active');
+    }
 
     // Add active class to the selected tool button
-    const targetButton = this.toolbar.querySelector(`[data-tool="${toolName}"]`);
+    var targetButton = this.toolbar.querySelector('[data-tool="' + toolName + '"]');
     if (targetButton) {
       targetButton.classList.add('active');
     }
@@ -1096,13 +1174,13 @@ export class PenTool {
     if (toolName !== 'eraser') {
       this.hideEraserIndicator();
     }
-  }
+  };
 
   /**
    * Destroy the pen tool and clean up all elements and event listeners
    * This completely removes the pen tool from the DOM and cleans up resources
    */
-  destroy() {
+  PenTool.prototype.destroy = function() {
     // Remove event listeners first
     this.removeEventListeners();
     
@@ -1140,6 +1218,17 @@ export class PenTool {
     this.strokes = [];
     this.temporaryEraserStroke = null;
     
+    // Clear bound function references
+    this.boundHandleDrawStart = null;
+    this.boundHandleDrawMove = null;
+    this.boundHandleMouseLeave = null;
+    this.boundHandleDrawEnd = null;
+    this.boundHandleTouchStart = null;
+    this.boundHandleTouchMove = null;
+    this.boundHandleTouchEnd = null;
+    this.boundSystemThemeChange = null;
+    this.systemThemeMediaQuery = null;
+    
     // Reset state
     this.isDrawing = false;
     this.currentPathData = '';
@@ -1147,21 +1236,25 @@ export class PenTool {
     this.currentTool = 'pen';
     
     console.log('PenTool destroyed successfully');
-  }
+  };
 
   /**
    * Programmatically erase all drawings
    * This is an alias for clearAll() with a more descriptive name for programmatic use
    */
-  eraseAll() {
+  PenTool.prototype.eraseAll = function() {
     this.clearAll();
-  }
+  };
 
   /**
    * Get the currently active tool
    * @returns {string} The name of the currently active tool
    */
-  getCurrentTool() {
+  PenTool.prototype.getCurrentTool = function() {
     return this.currentTool;
-  }
-}
+  };
+
+  // Make PenTool available globally (old school approach)
+  window.PenTool = PenTool;
+
+})(window);

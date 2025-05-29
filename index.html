@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SVG Kalem Aracı Denemesi</title>
+    <title>SVG Pen Tool - Traditional Implementation</title>
     <!-- Demo styles for this example page only -->
     <style>
       body {
@@ -59,7 +59,7 @@
       <div class="drawing-container">
         <div id="drawing-area" class="drawing-area">
           <div class="content">
-            <h3>Drawing Area</h3>
+            <h3>Drawing Area (Traditional Implementation)</h3>
           </div>
         </div>
         <div class="controls" style="margin-top: 20px; text-align: center;">
@@ -87,14 +87,16 @@
         </div>
       </div>
 
-    <script type="module" src="./pen-tool.js"></script> <!-- Importing the PenTool module -->
-    <script type="module">
-      import { PenTool } from './pen-tool.js'; // Import PenTool
+    <!-- Traditional script loading (no modules) -->
+    <script src="./pen-tool.js"></script>
+    <script>
+      // Traditional JavaScript approach - no imports needed
+      // PenTool is now available as a global class
 
       // Initialize pen tool
-      const drawingArea = document.querySelector('#drawing-area');
+      var drawingArea = document.querySelector('#drawing-area');
 
-      const penToolOptions = {
+      var penToolOptions = {
         targetElement: drawingArea, // The container where the pen tool will be initialized
         lineWidth: 3, // Default line width
         lineColor: '#000000', // Default line color
@@ -105,50 +107,50 @@
         themeSetting: 'light' // 'dark', 'light', or 'system'
       };
 
-      const penToolInstance = new PenTool(penToolOptions);
+      var penToolInstance = new PenTool(penToolOptions);
       
       // Initialize the pen tool manually
-      //penToolInstance.init();
+      // penToolInstance.init();
 
       // Toggle button functionality
-      const toggleButton = document.getElementById('toggle-pen-tool');
-      let penToolEnabled = true;
+      var toggleButton = document.getElementById('toggle-pen-tool');
+      var penToolEnabled = true;
 
-      toggleButton.addEventListener('click', () => {
+      toggleButton.addEventListener('click', function() {
         // Use the new toggle method to switch the pen tool's state
         penToolEnabled = penToolInstance.toggle();
         toggleButton.textContent = penToolEnabled ? 'Disable Pen Tool' : 'Enable Pen Tool';
       });
 
       // Tool switching buttons
-      document.getElementById('switch-to-pen').addEventListener('click', () => {
+      document.getElementById('switch-to-pen').addEventListener('click', function() {
         penToolInstance.switchToPenTool();
         console.log('Switched to pen tool. Current tool:', penToolInstance.getCurrentTool());
       });
 
-      document.getElementById('switch-to-eraser').addEventListener('click', () => {
+      document.getElementById('switch-to-eraser').addEventListener('click', function() {
         penToolInstance.switchToEraserTool();
         console.log('Switched to eraser tool. Current tool:', penToolInstance.getCurrentTool());
       });
 
-      document.getElementById('switch-to-hand').addEventListener('click', () => {
+      document.getElementById('switch-to-hand').addEventListener('click', function() {
         penToolInstance.switchToHandTool();
         console.log('Switched to hand tool. Current tool:', penToolInstance.getCurrentTool());
       });
 
       // Erase all button
-      document.getElementById('erase-all').addEventListener('click', () => {
+      document.getElementById('erase-all').addEventListener('click', function() {
         penToolInstance.eraseAll();
         console.log('All drawings erased');
       });
 
       // Init and destroy buttons
-      document.getElementById('init-pen-tool').addEventListener('click', () => {
+      document.getElementById('init-pen-tool').addEventListener('click', function() {
         penToolInstance.init();
         console.log('Pen tool initialized');
       });
 
-      document.getElementById('destroy-pen-tool').addEventListener('click', () => {
+      document.getElementById('destroy-pen-tool').addEventListener('click', function() {
         penToolInstance.destroy();
         console.log('Pen tool destroyed');
       });
