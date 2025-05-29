@@ -70,6 +70,7 @@
     this.eraserWidth = options.eraserWidth || 15;
     this.themeToggle = options.themeToggle !== undefined ? options.themeToggle : false;
     this.themeSetting = options.themeSetting || 'system';
+    this.handTool = options.handTool !== undefined ? options.handTool : 'touch-only'; // 'show', 'hide', 'touch-only'
     
     // Set initial dark mode state based on themeSetting
     if (this.themeSetting === 'dark') {
@@ -160,6 +161,12 @@
     // Add tools to toolbar
     this.createToolbar();
     
+    // Validate current tool - if hand tool is selected but not available, default to pen
+    if (this.currentTool === 'hand' && !this.isHandToolAvailable()) {
+      this.currentTool = 'pen';
+      console.warn('Hand tool is not available with current settings. Defaulting to pen tool.');
+    }
+    
     // Append elements to DOM
     this.targetElement.appendChild(this.svg);
     this.targetElement.appendChild(this.toolbar);
@@ -229,10 +236,21 @@
     var self = this;
     var tools = [
       { name: 'pen', icon: this.getPenIcon(), title: 'Kalem Aracı' },
-      { name: 'eraser', icon: this.getEraserIcon(), title: 'Silgi Aracı' },
-      { name: 'hand', icon: this.getHandIcon(), title: 'El Aracı - Dokunmatik Hareketler İçin (Pinch/Pan)' },
-      { name: 'clear', icon: this.getClearIcon(), title: 'Tümünü Temizle' }
+      { name: 'eraser', icon: this.getEraserIcon(), title: 'Silgi Aracı' }
     ];
+    
+    // Add hand tool based on handTool option
+    if (this.handTool === 'show') {
+      tools.push({ name: 'hand', icon: this.getHandIcon(), title: 'El Aracı - Dokunmatik Hareketler İçin (Pinch/Pan)' });
+    } else if (this.handTool === 'touch-only') {
+      // Add hand tool only if touch is supported
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        tools.push({ name: 'hand', icon: this.getHandIcon(), title: 'El Aracı - Dokunmatik Hareketler İçin (Pinch/Pan)' });
+      }
+    }
+    // If handTool === 'hide', don't add the hand tool
+    
+    tools.push({ name: 'clear', icon: this.getClearIcon(), title: 'Tümünü Temizle' });
     
     // Add theme toggle if enabled
     if (this.themeToggle) {
@@ -1328,6 +1346,15 @@
    * Programmatically switch to hand tool
    */
   PenTool.prototype.switchToHandTool = function() {
+    // Check if hand tool is available
+    if (this.handTool === 'hide') {
+      console.warn('Hand tool is disabled. Set handTool option to "show" or "touch-only" to enable it.');
+      return;
+    }
+    if (this.handTool === 'touch-only' && !('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+      console.warn('Hand tool is set to "touch-only" but touch is not supported on this device.');
+      return;
+    }
     this.setActiveTool('hand');
   };
 
@@ -1341,9 +1368,22 @@
       return;
     }
 
-    var validTools = ['pen', 'eraser', 'hand'];
+    var validTools = ['pen', 'eraser'];
+    
+    // Add hand tool to valid tools only if it's available
+    var isHandToolAvailable = this.isHandToolAvailable();
+    if (isHandToolAvailable) {
+      validTools.push('hand');
+    }
+    
     if (validTools.indexOf(toolName) === -1) {
       console.error('Invalid tool name: ' + toolName + '. Valid tools are: ' + validTools.join(', '));
+      return;
+    }
+    
+    // If trying to switch to hand tool but it's not available, warn and return
+    if (toolName === 'hand' && !isHandToolAvailable) {
+      console.warn('Hand tool is not available with current settings.');
       return;
     }
 
@@ -1470,6 +1510,23 @@
   PenTool.prototype.getCurrentTool = function() {
     return this.currentTool;
   };
+
+  /**
+   * Check if hand tool is available based on configuration
+   * @returns {boolean} True if hand tool is available, false otherwise
+   */
+  PenTool.prototype.isHandToolAvailable = function() {
+    if (this.handTool === 'hide') {
+      return false;
+    } else if (this.handTool === 'touch-only') {
+      return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    } else if (this.handTool === 'show') {
+      return true;
+    }
+    return false;
+  };
+
+
 
   // Make PenTool available globally (old school approach)
   window.PenTool = PenTool;
