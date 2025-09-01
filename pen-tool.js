@@ -44,6 +44,7 @@
     this.themeSetting = null;
     this.isDarkMode = false;
     this.isEnabled = true; // Track whether the pen tool is enabled
+    this.toolbarVisibleBeforeDisable = null; // Track toolbar visibility before disable
 
     // Bound function references for proper event listener cleanup
     this.boundHandleDrawStart = null;
@@ -71,6 +72,7 @@
     this.themeToggle = options.themeToggle !== undefined ? options.themeToggle : false;
     this.themeSetting = options.themeSetting || 'system';
     this.handTool = options.handTool !== undefined ? options.handTool : 'touch-only'; // 'show', 'hide', 'touch-only'
+    this.showToolbar = options.showToolbar !== undefined ? options.showToolbar : true;
     
     // Set initial dark mode state based on themeSetting
     if (this.themeSetting === 'dark') {
@@ -153,13 +155,15 @@
     this.drawingContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     this.svg.appendChild(this.drawingContainer);
     
-    // Create toolbar
-    this.toolbar = document.createElement('div');
-    this.toolbar.className = 'pen-tool-toolbar';
-    this.setToolbarPosition();
-    
-    // Add tools to toolbar
-    this.createToolbar();
+    // Create toolbar only if showToolbar is true
+    if (this.showToolbar) {
+      this.toolbar = document.createElement('div');
+      this.toolbar.className = 'pen-tool-toolbar';
+      this.setToolbarPosition();
+      
+      // Add tools to toolbar
+      this.createToolbar();
+    }
     
     // Validate current tool - if hand tool is selected but not available, default to pen
     if (this.currentTool === 'hand' && !this.isHandToolAvailable()) {
@@ -169,13 +173,23 @@
     
     // Append elements to DOM
     this.targetElement.appendChild(this.svg);
-    this.targetElement.appendChild(this.toolbar);
+    if (this.showToolbar && this.toolbar) {
+      this.targetElement.appendChild(this.toolbar);
+    }
     
     // Add event listeners
     this.addEventListeners();
 
+    // Enable the pen tool
+    this.isEnabled = true;
+
     // Set pointer events to auto since pen is selected by default
     this.svg.style.pointerEvents = 'auto';
+    
+    // Set initial active tool in toolbar if toolbar exists
+    if (this.toolbar) {
+      this.setActiveTool(this.currentTool);
+    }
     
     // Apply the theme based on the isDarkMode setting
     this.applyTheme();
@@ -185,6 +199,10 @@
    * Set toolbar position based on the toolPosition option
    */
   PenTool.prototype.setToolbarPosition = function() {
+    if (!this.toolbar) {
+      return; // Exit if toolbar doesn't exist
+    }
+    
     // Reset all positioning styles first
     this.toolbar.style.top = '';
     this.toolbar.style.right = '';
@@ -1185,7 +1203,7 @@
    * This makes the pen tool handle and toolbar visible and functional
    */
   PenTool.prototype.enable = function() {
-    if (!this.svg || !this.toolbar) {
+    if (!this.svg) {
       console.warn('PenTool is not initialized. Call init() first before enabling.');
       return;
     }
@@ -1198,8 +1216,8 @@
       this.svg.style.pointerEvents = this.currentTool === 'hand' ? 'none' : 'auto';
     }
     
-    // Make toolbar visible
-    if (this.toolbar) {
+    // Make toolbar visible only if it was visible before disable
+    if (this.toolbar && this.toolbarVisibleBeforeDisable) {
       this.toolbar.style.display = 'flex';
     }
     
@@ -1231,8 +1249,9 @@
       this.svg.style.pointerEvents = 'none';
     }
     
-    // Hide toolbar
+    // Save current toolbar visibility and hide toolbar temporarily
     if (this.toolbar) {
+      this.toolbarVisibleBeforeDisable = this.toolbar.style.display !== 'none';
       this.toolbar.style.display = 'none';
     }
     
@@ -1390,16 +1409,19 @@
     // Update current tool
     this.currentTool = toolName;
 
-    // Remove active class from all tool buttons
-    var buttons = this.toolbar.querySelectorAll('.pen-tool-button');
-    for (var i = 0; i < buttons.length; i++) {
-      buttons[i].classList.remove('active');
-    }
+    // Only update toolbar buttons if toolbar exists
+    if (this.toolbar) {
+      // Remove active class from all tool buttons
+      var buttons = this.toolbar.querySelectorAll('.pen-tool-button');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
+      }
 
-    // Add active class to the selected tool button
-    var targetButton = this.toolbar.querySelector('[data-tool="' + toolName + '"]');
-    if (targetButton) {
-      targetButton.classList.add('active');
+      // Add active class to the selected tool button
+      var targetButton = this.toolbar.querySelector('[data-tool="' + toolName + '"]');
+      if (targetButton) {
+        targetButton.classList.add('active');
+      }
     }
 
     // Configure SVG pointer events based on tool
@@ -1491,6 +1513,7 @@
     this.currentPathData = '';
     this.isEnabled = false;
     this.currentTool = 'pen';
+    this.toolbarVisibleBeforeDisable = null;
     
     console.log('PenTool destroyed successfully');
   };
@@ -1524,6 +1547,51 @@
       return true;
     }
     return false;
+  };
+
+  /**
+   * Show the toolbar
+   */
+  PenTool.prototype.showToolbarElement = function() {
+    if (!this.toolbar) {
+      // Create toolbar if it doesn't exist
+      this.toolbar = document.createElement('div');
+      this.toolbar.className = 'pen-tool-toolbar';
+      this.setToolbarPosition();
+      this.createToolbar();
+      this.targetElement.appendChild(this.toolbar);
+      this.applyTheme();
+    } else {
+      this.toolbar.style.display = 'flex';
+    }
+  };
+
+  /**
+   * Hide the toolbar
+   */
+  PenTool.prototype.hideToolbarElement = function() {
+    if (this.toolbar) {
+      this.toolbar.style.display = 'none';
+    }
+  };
+
+  /**
+   * Toggle toolbar visibility
+   */
+  PenTool.prototype.toggleToolbarElement = function() {
+    if (this.toolbar && this.toolbar.style.display !== 'none') {
+      this.hideToolbarElement();
+    } else {
+      this.showToolbarElement();
+    }
+  };
+
+  /**
+   * Check if toolbar is currently visible
+   * @returns {boolean} True if toolbar is visible, false otherwise
+   */
+  PenTool.prototype.isToolbarVisible = function() {
+    return this.toolbar && this.toolbar.style.display !== 'none';
   };
 
 

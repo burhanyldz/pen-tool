@@ -1,160 +1,225 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SVG Pen Tool - Traditional Implementation</title>
-    <!-- Demo styles for this example page only -->
-    <style>
-      body {
-        margin: 0;
-        display: flex;
-        place-items: center;
-        min-width: 320px;
-        min-height: 100vh;
-        font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-        line-height: 1.5;
-        font-weight: 400;
-        color: #213547;
-        background-color: #ffffff;
-      }
+<html lang="tr">
 
-      .drawing-container {
-        margin-top: 2rem;
-        width: 100%;
-        margin-left: 20px;
-        margin-right: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Kalem Aracı - Geleneksel Uygulama</title>
+  <!-- Demo styles for this example page only -->
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      place-items: center;
+      min-width: 320px;
+      min-height: 100vh;
+      font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      font-weight: 400;
+      color: #213547;
+      background-color: #ffffff;
+    }
 
-      .drawing-area {
-        width: 100%;
-        height: 500px;
-        border: 2px solid #646cff;
-        border-radius: 8px;
-        margin: 1rem 0;
-        position: relative;
-        overflow: hidden;
-      }
+    .drawing-container {
+      margin-top: 2rem;
+      width: 100%;
+      margin-left: 20px;
+      margin-right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-      .drawing-area .content {
-        padding: 1rem;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        height: 100%;
-      }
+    .drawing-area {
+      width: 100%;
+      height: 500px;
+      border: 2px solid #646cff;
+      border-radius: 8px;
+      margin: 1rem 0;
+      position: relative;
+      overflow: hidden;
+    }
 
-      /* Dark mode demo styles */
-      .pen-tool-dark-mode {
-        color: rgba(255, 255, 255, 0.87) !important;
-        background-color: #242424 !important;
-      }
-    </style>
-  </head>
-  <body>
-      <div class="drawing-container">
-        <div id="drawing-area" class="drawing-area">
-          <div class="content">
-            <h3>Drawing Area (Traditional Implementation)</h3>
-          </div>
-        </div>
-        <div class="controls" style="margin-top: 20px; text-align: center;">
-          <button id="toggle-pen-tool" style="padding: 8px 16px; background-color: #646cff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Disable Pen Tool
-          </button>
-          <button id="switch-to-pen" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Switch to Pen
-          </button>
-          <button id="switch-to-eraser" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Switch to Eraser
-          </button>
-          <button id="switch-to-hand" style="padding: 8px 16px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Switch to Hand
-          </button>
-          <button id="erase-all" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Erase All
-          </button>
-          <button id="init-pen-tool" style="padding: 8px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Init Pen Tool
-          </button>
-          <button id="destroy-pen-tool" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
-            Destroy Pen Tool
-          </button>
-        </div>
+    .drawing-area .content {
+      padding: 1rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+    }
+
+    /* Dark mode demo styles */
+    .pen-tool-dark-mode {
+      color: rgba(255, 255, 255, 0.87) !important;
+      background-color: #242424 !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="drawing-container">
+    <div id="drawing-area" class="drawing-area">
+      <div class="content">
+        <h3>Çizim Alanı</h3>
       </div>
+    </div>
+    <div class="controls" style="margin-top: 20px; text-align: center;">
+      <button id="init-pen-tool" style="padding: 8px 16px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Kalem Araç Başlat
+      </button>
+      <button id="destroy-pen-tool" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Kalem Araç Kaldır
+      </button>
+      <br>
 
-    <!-- Traditional script loading (no modules) -->
-    <script src="./pen-tool.js"></script>
-    <script>
-      // Traditional JavaScript approach - no imports needed
-      // PenTool is now available as a global class
+      <button id="toggle-pen-tool" style="padding: 8px 16px; background-color: #646cff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Kalem Aracını Devre Dışı Bırak
+      </button>
+      <button id="switch-to-pen" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Kaleme Geç
+      </button>
+      <button id="switch-to-eraser" style="padding: 8px 16px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Silgiye Geç
+      </button>
+      <button id="switch-to-hand" style="padding: 8px 16px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        El Aracına Geç
+      </button>
+      <button id="erase-all" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Tümünü Temizle
+      </button>
+      <br>
+      <button id="show-toolbar" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Araç Çubuğunu Göster
+      </button>
+      <button id="hide-toolbar" style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Araç Çubuğunu Gizle
+      </button>
+      <button id="toggle-toolbar" style="padding: 8px 16px; background-color: #fd7e14; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px;">
+        Araç Çubuğunu Göster/Gizle
+      </button>
+    </div>
+  </div>
 
-      // Initialize pen tool
-      var drawingArea = document.querySelector('#drawing-area');
+  <!-- Traditional script loading (no modules) -->
+  <script src="./pen-tool.js"></script>
+  <script>
+    // Traditional JavaScript approach - no imports needed
+    // PenTool is now available as a global class
 
-      var penToolOptions = {
-        targetElement: drawingArea, // The container where the pen tool will be initialized
-        lineWidth: 3, // Default line width
-        lineColor: '#000000', // Default line color
-        toolPosition: 'left', // 'left', 'right', 'bottom', 'top'
-        zIndex: 10, // z-index for the tool
-        eraserWidth: 50, // Width of the eraser
-        themeToggle: false, // Enable the theme toggle button
-        themeSetting: 'light', // 'dark', 'light', or 'system'
-        handTool: 'touch-only' // 'show', 'hide', or 'touch-only'
-      };
+    // Initialize pen tool
+    var drawingArea = document.querySelector('#drawing-area');
 
-      var penToolInstance = new PenTool(penToolOptions);
-      
-      // Initialize the pen tool manually
-      // penToolInstance.init();
+    var penToolOptions = {
+      targetElement: drawingArea, // The container where the pen tool will be initialized
+      lineWidth: 3, // Default line width
+      lineColor: '#000000', // Default line color
+      toolPosition: 'left', // 'left', 'right', 'bottom', 'top'
+      zIndex: 10, // z-index for the tool
+      eraserWidth: 50, // Width of the eraser
+      themeToggle: false, // Enable the theme toggle button
+      themeSetting: 'light', // 'dark', 'light', or 'system'
+      handTool: 'touch-only', // 'show', 'hide', or 'touch-only'
+      showToolbar: true // Araç çubuğunu başlangıçta göster/gizle
+    };
 
-      // Toggle button functionality
-      var toggleButton = document.getElementById('toggle-pen-tool');
-      var penToolEnabled = true;
+    var penToolInstance = new PenTool(penToolOptions);
 
-      toggleButton.addEventListener('click', function() {
-        // Use the new toggle method to switch the pen tool's state
-        penToolEnabled = penToolInstance.toggle();
-        toggleButton.textContent = penToolEnabled ? 'Disable Pen Tool' : 'Enable Pen Tool';
-      });
+    // Initialize the pen tool manually
+    // penToolInstance.init();
 
-      // Tool switching buttons
-      document.getElementById('switch-to-pen').addEventListener('click', function() {
-        penToolInstance.switchToPenTool();
-        console.log('Switched to pen tool. Current tool:', penToolInstance.getCurrentTool());
-      });
+    // Dokunmatik destek kontrolü: El aracı butonunu yalnızca dokunmatik cihazlarda göster
+    var handToolButton = document.getElementById('switch-to-hand');
+    var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!isTouchDevice && handToolButton) {
+      handToolButton.style.display = 'none';
+    }
 
-      document.getElementById('switch-to-eraser').addEventListener('click', function() {
-        penToolInstance.switchToEraserTool();
-        console.log('Switched to eraser tool. Current tool:', penToolInstance.getCurrentTool());
-      });
+    // Toggle button functionality
+    var toggleButton = document.getElementById('toggle-pen-tool');
+    var penToolEnabled = true;
 
-      document.getElementById('switch-to-hand').addEventListener('click', function() {
-        penToolInstance.switchToHandTool();
-        console.log('Switched to hand tool. Current tool:', penToolInstance.getCurrentTool());
-      });
+    toggleButton.addEventListener('click', function () {
+      // Kalem aracının durumunu değiştirme
+      penToolEnabled = penToolInstance.toggle();
+      toggleButton.textContent = penToolEnabled ? 'Kalem Aracını Devre Dışı Bırak' : 'Kalem Aracını Etkinleştir';
+    });
 
-      // Erase all button
-      document.getElementById('erase-all').addEventListener('click', function() {
-        penToolInstance.eraseAll();
-        console.log('All drawings erased');
-      });
+    // Tool switching buttons
+    document.getElementById('switch-to-pen').addEventListener('click', function () {
+      penToolInstance.switchToPenTool();
+      console.log('Kalem aracına geçildi. Mevcut araç:', penToolInstance.getCurrentTool());
+    });
 
-      // Init and destroy buttons
-      document.getElementById('init-pen-tool').addEventListener('click', function() {
-        penToolInstance.init();
-        console.log('Pen tool initialized');
-      });
+    document.getElementById('switch-to-eraser').addEventListener('click', function () {
+      penToolInstance.switchToEraserTool();
+      console.log('Silgi aracına geçildi. Mevcut araç:', penToolInstance.getCurrentTool());
+    });
 
-      document.getElementById('destroy-pen-tool').addEventListener('click', function() {
-        penToolInstance.destroy();
-        console.log('Pen tool destroyed');
-      });
-    </script>
-  </body>
+    document.getElementById('switch-to-hand').addEventListener('click', function () {
+      penToolInstance.switchToHandTool();
+      console.log('El aracına geçildi. Mevcut araç:', penToolInstance.getCurrentTool());
+    });
+
+    // Erase all button
+    document.getElementById('erase-all').addEventListener('click', function () {
+      penToolInstance.eraseAll();
+      console.log('Tüm çizimler temizlendi');
+    });
+
+    // Init and destroy buttons
+    document.getElementById('init-pen-tool').addEventListener('click', function () {
+      penToolInstance.init();
+      console.log('Kalem aracı başlatıldı');
+    });
+
+    document.getElementById('destroy-pen-tool').addEventListener('click', function () {
+      penToolInstance.destroy();
+      console.log('Kalem aracı kaldırıldı');
+    });
+
+    // Toolbar control buttons
+    document.getElementById('show-toolbar').addEventListener('click', function () {
+      penToolInstance.showToolbarElement();
+      console.log('Araç çubuğu gösterildi');
+    });
+
+    document.getElementById('hide-toolbar').addEventListener('click', function () {
+      penToolInstance.hideToolbarElement();
+      console.log('Araç çubuğu gizlendi');
+    });
+
+    document.getElementById('toggle-toolbar').addEventListener('click', function () {
+      penToolInstance.toggleToolbarElement();
+      console.log('Araç çubuğu değiştirildi. Görünür mü:', penToolInstance.isToolbarVisible());
+    });
+
+    // --- Fonksiyon açıklamaları (Geliştiriciler için) ---
+    var funcListContainer = document.createElement('div');
+    funcListContainer.style.maxWidth = '900px';
+    funcListContainer.style.margin = '20px auto';
+    funcListContainer.style.textAlign = 'left';
+    funcListContainer.innerHTML = `\n        <h4>Mevcut Fonksiyonlar ve Açıklamaları</h4>\n
+            <ul>\n
+                <li><strong>init()</strong> — PenTool bileşenini başlatır ve SVG ile araç çubuğunu DOM'a ekler.</li>\n
+                <li><strong>destroy()</strong> — Tüm event listener'ları ve DOM elemanlarını temizleyerek aracı tamamen kaldırır.</li>\n
+                <li><strong>toggle()</strong> — PenTool'u etkinleştirir/devre dışı bırakır (enable/disable değişimi yapar).</li>\n
+                <li><strong>enable()</strong> — Araç ve araç çubuğunu görünür ve çalışır hale getirir.</li>\n
+                <li><strong>disable()</strong> — Çizimi durdurur, araç çubuğunu gizler ve event listener'ları kaldırır.</li>\n
+                <li><strong>switchToPenTool()</strong> — Çizim modunu kaleme geçirir.</li>\n
+                <li><strong>switchToEraserTool()</strong> — Çizim modunu silgiye geçirir.</li>\n
+                <li><strong>switchToHandTool()</strong> — (Sadece dokunmatik) El aracı moduna geçirir (dokunmatik için pan/zoom).</li>\n
+                <li><strong>eraseAll() / eraseAll</strong> — Tüm çizimleri siler (clearAll alias).</li>\n
+                <li><strong>showToolbarElement()</strong> — Araç çubuğunu gösterir (programatik kontrol).</li>\n
+                <li><strong>hideToolbarElement()</strong> — Araç çubuğunu gizler (programatik kontrol).</li>\n
+                <li><strong>toggleToolbarElement()</strong> — Araç çubuğu görünürlüğünü değiştirir.</li>\n
+                <li><strong>isToolbarVisible()</strong> — Araç çubuğunun şu an görünür olup olmadığını boolean döner.</li>\n
+                <li><strong>getCurrentTool()</strong> — Geçerli aracı (pen/eraser/hand) döner.</li>\n
+              </ul>\n
+            <p>Bu sayfada bulunan butonlar, yukarıdaki metodların basit örnek çağrılarını gösterir. Geliştirici olarak <code>penToolInstance</code> üzerinden istediğiniz fonksiyonu çağırabilirsiniz.</p>\n
+    `;
+    document.querySelector('.drawing-container').appendChild(funcListContainer);
+  </script>
+</body>
+
 </html>
